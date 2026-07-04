@@ -41,6 +41,10 @@ The `permissions-deny.json` hard floor is the complementary control for the lite
 - Trap a session. Loop-safety is paramount: a self-imposed 3-block ceiling yields below Claude Code's cap, and every error path fails open. This is verified and deliberate — the gate errs toward letting a session stop, never toward trapping it.
 - Judge verification *quality*. It checks that `verification.md` is non-empty, not that its contents constitute real verification (that is the verifier agent's job).
 
+## A note on the non-security hooks
+
+The suite also contains hooks that are *functional*, not defensive, and make no security claims: the strike counter (progress signal), SessionStart re-injection (compaction survival), image-read interception (vision routing — its deny reason is scrubbed of env values whose names look credential-shaped), and the Stop gate's completion manifest (conductor signaling; contains paths, slugs, and states — never file contents).
+
 ## Reporting
 
-Security issues in Albion itself should be reported per `SECURITY.md` (added at the 1.0 release milestone). This document will track the hook hardening backlog as items land.
+Security issues in Albion itself should be reported per [`SECURITY.md`](../SECURITY.md). This document tracks the hook hardening backlog as items land.
