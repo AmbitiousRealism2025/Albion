@@ -71,7 +71,13 @@ STUB
 
   assert_exit_code 0 "$exit_code" "offline doctor should pass with manifest check"
   assert_eq "" "$doctor_stderr" "offline doctor should not write stderr"
-  assert_contains "$doctor_output" "PASS manifest: charter in sync; 5 skills, 5 agents, plugin.json ok" "doctor manifest check should pass"
+  # Derive expected counts from the manifest itself so adding a skill or agent
+  # does not break this assertion (invariant, not constant).
+  local skills_count
+  local agents_count
+  skills_count="$(grep -c '^  - id:' <(sed -n '/^skills:/,/^agents:/p' "${ROOT_DIR}/manifest/albion-manifest.yaml"))"
+  agents_count="$(grep -c '^  - id:' <(sed -n '/^agents:/,$p' "${ROOT_DIR}/manifest/albion-manifest.yaml"))"
+  assert_contains "$doctor_output" "PASS manifest: charter in sync; ${skills_count} skills, ${agents_count} agents, plugin.json ok" "doctor manifest check should pass"
 
   # The summary tally must equal the status lines printed above it; a check
   # that adjusts the counters directly can silently desynchronize them.
