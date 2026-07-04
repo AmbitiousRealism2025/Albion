@@ -54,13 +54,41 @@ PATTERNS = [
     },
     {
         "type": "github_token",
-        "regex": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
+        "regex": re.compile(
+            r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[0-9A-Za-z_]{22,})\b"
+        ),
         "replace": lambda match: ("[REDACTED:github_token]", True),
+    },
+    {
+        "type": "gitlab_token",
+        "regex": re.compile(r"\bglpat-[0-9A-Za-z_-]{20,}\b"),
+        "replace": lambda match: ("[REDACTED:gitlab_token]", True),
+    },
+    {
+        "type": "google_api_key",
+        "regex": re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"),
+        "replace": lambda match: ("[REDACTED:google_api_key]", True),
+    },
+    {
+        "type": "stripe_key",
+        "regex": re.compile(r"\bsk_(?:live|test)_[0-9A-Za-z]{16,}\b"),
+        "replace": lambda match: ("[REDACTED:stripe_key]", True),
     },
     {
         "type": "api_key",
         "regex": re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
         "replace": lambda match: ("[REDACTED:api_key]", True),
+    },
+    {
+        "type": "db_credential",
+        "regex": re.compile(
+            r"\b(?P<scheme>postgres|postgresql|mysql|mongodb|redis|amqp)://"
+            r"(?P<user>[^:@/\s]+):(?P<password>[^@/\s]+)@"
+        ),
+        "replace": lambda match: (
+            f"{match.group('scheme')}://{match.group('user')}:[REDACTED:db_credential]@",
+            True,
+        ),
     },
     {
         "type": "slack_token",
@@ -82,7 +110,8 @@ PATTERNS = [
     {
         "type": "generic_secret",
         "regex": re.compile(
-            r"(?i)\b(?P<prefix>(?:password|token|secret)\s*=\s*)(?P<value>[A-Za-z0-9_./+=:-]{16,})"
+            r"(?i)(?<![A-Za-z0-9])(?P<prefix>(?:[A-Za-z0-9]+_)*(?:password|token|secret)\s*[:=]\s*)"
+            r"(?P<value>[A-Za-z0-9_./+=:-]{16,})"
         ),
         "replace": generic_replacement,
     },
@@ -90,14 +119,16 @@ PATTERNS = [
 
 
 def scoped_path(payload):
-    if payload.get("tool_name") not in TARGET_TOOLS:
+    tool_name = payload.get("tool_name")
+    if tool_name not in TARGET_TOOLS:
         return None
 
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return None
 
-    file_path = tool_input.get("file_path")
+    path_key = "notebook_path" if tool_name == "NotebookEdit" else "file_path"
+    file_path = tool_input.get(path_key)
     if not isinstance(file_path, str) or not file_path:
         return None
 

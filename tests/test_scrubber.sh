@@ -82,11 +82,12 @@ json_payload() {
 import json
 import sys
 
+path_key = "notebook_path" if sys.argv[1] == "NotebookEdit" else "file_path"
 print(json.dumps({
     "hook_event_name": "PostToolUse",
     "tool_name": sys.argv[1],
     "tool_input": {
-        "file_path": sys.argv[2],
+        path_key: sys.argv[2],
         "content": "already written"
     },
     "tool_response": {
@@ -104,6 +105,37 @@ import sys
 
 print(json.loads(sys.argv[1])["hookSpecificOutput"]["additionalContext"])
 PY
+}
+
+assert_scrubs_fixture() {
+  local fixture_name
+  local fixture_body
+  local expected_marker
+  local expected_type
+  local removed_value
+  local target_path
+  local scrubbed_content
+  local scrubber_context
+  fixture_name="$1"
+  fixture_body="$2"
+  expected_marker="$3"
+  expected_type="$4"
+  removed_value="$5"
+  target_path="${TMP_DIR}/project/.agent-workbench/registry/${fixture_name}.md"
+  mkdir -p "$(dirname "$target_path")"
+  printf '%s\n' "$fixture_body" >"$target_path"
+
+  run_scrubber "$fixture_name" "$(json_payload Write "$target_path")"
+
+  assert_exit_code 0 "$RUN_CODE" "${fixture_name} scrub exits zero"
+  assert_eq "" "$RUN_STDERR" "${fixture_name} scrub writes no stderr"
+
+  scrubbed_content="$(cat "$target_path")"
+  assert_contains "$scrubbed_content" "$expected_marker" "${fixture_name} marker is written to disk"
+  assert_not_contains "$scrubbed_content" "$removed_value" "${fixture_name} fake value is removed from disk"
+
+  scrubber_context="$(notice_context "$RUN_STDOUT")"
+  assert_contains "$scrubber_context" "$expected_type" "${fixture_name} notice reports redaction type"
 }
 
 write_secret_fixture() {
@@ -212,6 +244,102 @@ test_non_workbench_file_is_untouched_and_silent() {
   assert_eq "$before" "$(cat "$target")" "non-workbench file is unchanged"
 }
 
+test_notebook_edit_uses_notebook_path_and_redacts() {
+  local workbench_dir
+  local target
+  local content
+  local context
+  workbench_dir="${TMP_DIR}/project/.agent-workbench/notebook"
+  target="${workbench_dir}/evidence.ipynb"
+  mkdir -p "$workbench_dir"
+  printf '{"cells":[{"source":["aws=AKIATESTTESTTESTTEST\\n"]}]}\n' >"$target"
+
+  run_scrubber "notebook-edit" "$(json_payload NotebookEdit "$target")"
+
+  assert_exit_code 0 "$RUN_CODE" "NotebookEdit scrub exits zero"
+  assert_eq "" "$RUN_STDERR" "NotebookEdit scrub writes no stderr"
+  content="$(cat "$target")"
+  assert_contains "$content" "[REDACTED:aws_access_key]" "NotebookEdit redacts via notebook_path"
+  assert_not_contains "$content" "AKIATESTTESTTESTTEST" "NotebookEdit fake AWS value is removed"
+  context="$(notice_context "$RUN_STDOUT")"
+  assert_contains "$context" "aws_access_key" "NotebookEdit notice reports AWS type"
+}
+
+test_redacts_google_api_key() {
+  assert_scrubs_fixture \
+    "google-api-key" \
+    "google=AIzaTESTTESTTESTTESTTESTTESTTESTTESTTES" \
+    "[REDACTED:google_api_key]" \
+    "google_api_key" \
+    "AIzaTESTTESTTESTTESTTESTTESTTESTTESTTES"
+}
+
+test_redacts_stripe_secret_key() {
+  assert_scrubs_fixture \
+    "stripe-key" \
+    "stripe=sk_test_TESTTESTTESTTEST" \
+    "[REDACTED:stripe_key]" \
+    "stripe_key" \
+    "sk_test_TESTTESTTESTTEST"
+}
+
+test_redacts_github_fine_grained_pat() {
+  assert_scrubs_fixture \
+    "github-fine-grained-pat" \
+    "github=github_pat_TESTTESTTESTTESTTESTTEST" \
+    "[REDACTED:github_token]" \
+    "github_token" \
+    "github_pat_TESTTESTTESTTESTTESTTEST"
+}
+
+test_redacts_gitlab_pat() {
+  assert_scrubs_fixture \
+    "gitlab-pat" \
+    "gitlab=glpat-TESTTESTTESTTESTTEST" \
+    "[REDACTED:gitlab_token]" \
+    "gitlab_token" \
+    "glpat-TESTTESTTESTTESTTEST"
+}
+
+test_redacts_db_connection_password() {
+  assert_scrubs_fixture \
+    "db-credential" \
+    "db=postgresql://test_user:TESTPASS123456789@db.example.invalid/albion" \
+    "postgresql://test_user:[REDACTED:db_credential]@db.example.invalid/albion" \
+    "db_credential" \
+    "TESTPASS123456789"
+}
+
+test_redacts_underscore_prefixed_generic_secret_keys() {
+  local target
+  local content
+  local context
+  target="${TMP_DIR}/project/.agent-workbench/registry/underscore-generics.md"
+  mkdir -p "$(dirname "$target")"
+  printf 'client_secret=ClientSecretTEST1234\napi_secret=ApiSecretTEST123456\n' >"$target"
+
+  run_scrubber "underscore-generics" "$(json_payload Write "$target")"
+
+  assert_exit_code 0 "$RUN_CODE" "underscore generic scrub exits zero"
+  assert_eq "" "$RUN_STDERR" "underscore generic scrub writes no stderr"
+  content="$(cat "$target")"
+  assert_contains "$content" "client_secret=[REDACTED:generic_secret]" "client_secret is redacted"
+  assert_contains "$content" "api_secret=[REDACTED:generic_secret]" "api_secret is redacted"
+  assert_not_contains "$content" "ClientSecretTEST1234" "client_secret fake value is removed"
+  assert_not_contains "$content" "ApiSecretTEST123456" "api_secret fake value is removed"
+  context="$(notice_context "$RUN_STDOUT")"
+  assert_contains "$context" "generic_secret" "underscore generic notice reports type"
+}
+
+test_redacts_colon_separated_generic_secret() {
+  assert_scrubs_fixture \
+    "colon-generic-secret" \
+    "password: PasswordTEST1234" \
+    "password: [REDACTED:generic_secret]" \
+    "generic_secret" \
+    "PasswordTEST1234"
+}
+
 test_double_run_is_idempotent() {
   local workbench_dir
   local target
@@ -261,6 +389,14 @@ test_captured_non_workbench_post_tool_use_payloads_are_silent() {
 test_redacts_all_supported_secret_types_and_preserves_mode
 test_clean_workbench_file_is_untouched_and_silent
 test_non_workbench_file_is_untouched_and_silent
+test_notebook_edit_uses_notebook_path_and_redacts
+test_redacts_google_api_key
+test_redacts_stripe_secret_key
+test_redacts_github_fine_grained_pat
+test_redacts_gitlab_pat
+test_redacts_db_connection_password
+test_redacts_underscore_prefixed_generic_secret_keys
+test_redacts_colon_separated_generic_secret
 test_double_run_is_idempotent
 test_malformed_stdin_exits_zero_and_logs_without_output
 test_captured_non_workbench_post_tool_use_payloads_are_silent
