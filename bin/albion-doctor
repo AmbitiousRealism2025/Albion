@@ -408,7 +408,6 @@ print(f"{skills_count} skills, {agents_count} agents, plugin.json ok")
 PY
 )"; then
     record_check "PASS" "manifest" "charter in sync; ${validation}"
-    pass_count=$((pass_count - 1))
     return 0
   fi
 

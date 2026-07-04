@@ -206,7 +206,7 @@ RUN_ENV=("ALBION_ZAI_TOKEN=test-token" "CLAUDE_STUB_VERSION=$(cat "${TMP_DIR}/ve
 run_doctor "version-fail" --offline
 assert_exit_code 1 "$RUN_CODE" "Claude Code 2.1.150 fails the minimum gate"
 assert_contains "$RUN_STDOUT" "FAIL claude-version: Claude Code 2.1.150 is below 2.1.163" "minimum version failure is reported"
-assert_contains "$RUN_STDOUT" "5 pass, 1 fail, 1 warn, 0 skip" "version failure summary counts"
+assert_contains "$RUN_STDOUT" "6 pass, 1 fail, 1 warn, 0 skip" "version failure summary counts"
 
 stub_path_170="$(make_claude_path version-warn 2.1.170)"
 RUN_PATH="$stub_path_170"
@@ -214,7 +214,7 @@ RUN_ENV=("ALBION_ZAI_TOKEN=test-token" "CLAUDE_STUB_VERSION=$(cat "${TMP_DIR}/ve
 run_doctor "version-warn" --offline
 assert_exit_code 0 "$RUN_CODE" "Claude Code 2.1.170 warns but exits zero"
 assert_contains "$RUN_STDOUT" "WARN claude-version: Claude Code 2.1.170 meets minimum 2.1.163" "preferred version warning is reported"
-assert_contains "$RUN_STDOUT" "5 pass, 0 fail, 2 warn, 0 skip" "version warning summary counts"
+assert_contains "$RUN_STDOUT" "6 pass, 0 fail, 2 warn, 0 skip" "version warning summary counts"
 
 stub_path_200="$(make_claude_path version-pass 2.1.200)"
 RUN_PATH="$stub_path_200"
@@ -222,7 +222,7 @@ RUN_ENV=("ALBION_ZAI_TOKEN=test-token" "CLAUDE_STUB_VERSION=$(cat "${TMP_DIR}/ve
 run_doctor "version-pass" --offline
 assert_exit_code 0 "$RUN_CODE" "Claude Code 2.1.200 passes"
 assert_contains "$RUN_STDOUT" "PASS claude-version: Claude Code 2.1.200" "preferred version pass is reported"
-assert_contains "$RUN_STDOUT" "6 pass, 0 fail, 1 warn, 0 skip" "version pass summary counts"
+assert_contains "$RUN_STDOUT" "7 pass, 0 fail, 1 warn, 0 skip" "version pass summary counts"
 assert_contains "$RUN_STDOUT" "PASS env: lane=plan token=***set***" "env check masks token state"
 assert_contains "$RUN_STDOUT" "PASS endpoint-shape: https://api.z.ai/api/anthropic" "endpoint shape pass is reported"
 assert_contains "$RUN_STDOUT" "WARN tmux: tmux not found on PATH; conductor features unavailable" "tmux absence warning is deterministic"
@@ -236,7 +236,7 @@ RUN_ENV=("ALBION_ZAI_TOKEN=test-token" "CLAUDE_STUB_VERSION=$(cat "${TMP_DIR}/ve
 run_doctor "version-pass-tmux" --offline
 assert_exit_code 0 "$RUN_CODE" "Claude Code 2.1.200 passes when tmux is present"
 assert_contains "$RUN_STDOUT" "PASS tmux: ${stub_path_200_tmux}/tmux" "tmux presence pass is deterministic"
-assert_contains "$RUN_STDOUT" "7 pass, 0 fail, 0 warn, 0 skip" "tmux presence summary counts"
+assert_contains "$RUN_STDOUT" "8 pass, 0 fail, 0 warn, 0 skip" "tmux presence summary counts"
 
 RUN_PATH="$stub_path_200"
 RUN_ENV=(
@@ -248,7 +248,7 @@ run_doctor "endpoint-fail" --offline
 assert_exit_code 1 "$RUN_CODE" "wrong endpoint shape fails"
 assert_contains "$RUN_STDOUT" "FAIL endpoint-shape: ANTHROPIC_BASE_URL=https://api.z.ai/api/paas/v4" "endpoint failure reports actual value"
 assert_contains "$RUN_STDOUT" "documented trap /api/paas/v4" "endpoint failure names documented trap"
-assert_contains "$RUN_STDOUT" "5 pass, 1 fail, 1 warn, 0 skip" "endpoint failure summary counts"
+assert_contains "$RUN_STDOUT" "6 pass, 1 fail, 1 warn, 0 skip" "endpoint failure summary counts"
 
 curl_record="${TMP_DIR}/curl-success.record"
 : >"$curl_record"
@@ -263,7 +263,7 @@ RUN_ENV=(
 run_doctor "live-success" --live
 assert_exit_code 0 "$RUN_CODE" "live probe accepts glm-5.2 response"
 assert_contains "$RUN_STDOUT" "PASS live-probe: HTTP 200 model=glm-5.2" "live success reports response model"
-assert_contains "$RUN_STDOUT" "7 pass, 0 fail, 1 warn, 0 skip" "live success summary counts"
+assert_contains "$RUN_STDOUT" "8 pass, 0 fail, 1 warn, 0 skip" "live success summary counts"
 assert_contains "$(cat "$curl_record")" "url=https://api.z.ai/api/anthropic/v1/messages" "live probe posts to messages endpoint"
 assert_contains "$(cat "$curl_record")" '"model":"glm-5.2"' "live probe strips [1m] suffix from model"
 assert_not_contains "$RUN_STDOUT" "secret-token" "live success stdout never prints token"
@@ -282,7 +282,7 @@ run_doctor "live-wrong-model" --live
 assert_exit_code 1 "$RUN_CODE" "live probe fails wrong model"
 assert_contains "$RUN_STDOUT" "FAIL live-probe: HTTP 200 model=not-glm" "wrong model is reported"
 assert_contains "$RUN_STDOUT" "possible silent slot remap" "wrong model names silent remap hazard"
-assert_contains "$RUN_STDOUT" "6 pass, 1 fail, 1 warn, 0 skip" "wrong model summary counts"
+assert_contains "$RUN_STDOUT" "7 pass, 1 fail, 1 warn, 0 skip" "wrong model summary counts"
 
 curl_record="${TMP_DIR}/curl-401.record"
 : >"$curl_record"
@@ -304,7 +304,7 @@ run_doctor "live-missing-token" --live
 assert_exit_code 1 "$RUN_CODE" "missing token still reports env failure"
 assert_contains "$RUN_STDOUT" "FAIL env:" "missing token fails env check"
 assert_contains "$RUN_STDOUT" "SKIP live-probe: env did not load; no token resolves" "missing token skips live probe"
-assert_contains "$RUN_STDOUT" "4 pass, 1 fail, 1 warn, 2 skip" "missing token summary counts"
+assert_contains "$RUN_STDOUT" "5 pass, 1 fail, 1 warn, 2 skip" "missing token summary counts"
 
 RUN_ENV=("ALBION_ZAI_TOKEN=test-token" "CLAUDE_STUB_VERSION=$(cat "${TMP_DIR}/version-pass-bin/version")")
 run_doctor "usage-error" --bogus

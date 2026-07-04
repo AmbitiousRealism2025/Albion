@@ -72,6 +72,14 @@ STUB
   assert_exit_code 0 "$exit_code" "offline doctor should pass with manifest check"
   assert_eq "" "$doctor_stderr" "offline doctor should not write stderr"
   assert_contains "$doctor_output" "PASS manifest: charter in sync; 5 skills, 5 agents, plugin.json ok" "doctor manifest check should pass"
+
+  # The summary tally must equal the status lines printed above it; a check
+  # that adjusts the counters directly can silently desynchronize them.
+  local pass_lines
+  local summary_passes
+  pass_lines="$(printf '%s\n' "$doctor_output" | grep -c '^PASS ')"
+  summary_passes="$(printf '%s\n' "$doctor_output" | sed -n 's/^\([0-9][0-9]*\) pass.*/\1/p')"
+  assert_eq "$pass_lines" "$summary_passes" "doctor summary pass tally should match PASS lines"
 }
 
 validate_plugin_json
