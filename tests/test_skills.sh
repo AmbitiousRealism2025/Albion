@@ -18,6 +18,7 @@ skill_names = [
     "delegation",
     "recovery",
     "completion-gate",
+    "conductor",
 ]
 secret_patterns = {
     "aws_access_key": re.compile(r"AKIA[0-9A-Z]{16}"),

@@ -42,6 +42,8 @@ charter:
 skills:
   - id: completion-gate
     path: plugin/skills/completion-gate/SKILL.md
+  - id: conductor
+    path: plugin/skills/conductor/SKILL.md
   - id: delegation
     path: plugin/skills/delegation/SKILL.md
   - id: fable-mode-glm-5-2
