@@ -1,0 +1,475 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+print_usage() {
+  cat <<'USAGE'
+Usage: albion-doctor [--offline|--live] [--help]
+
+Verifies Albion environment, Claude Code version, endpoint shape, fixtures,
+and optionally probes the configured Z.ai Anthropic-compatible endpoint.
+USAGE
+}
+
+resolve_script_dir() {
+  local source_path
+  local source_dir
+
+  source_path="${BASH_SOURCE[0]}"
+  while [ -h "$source_path" ]; do
+    source_dir="$(cd -P "$(dirname "$source_path")" && pwd)"
+    source_path="$(readlink "$source_path")"
+    case "$source_path" in
+      /*) ;;
+      *) source_path="${source_dir}/${source_path}" ;;
+    esac
+  done
+
+  cd -P "$(dirname "$source_path")" && pwd
+}
+
+record_check() {
+  local status
+  local name
+  local detail
+
+  status="$1"
+  name="$2"
+  detail="$3"
+
+  case "$status" in
+    PASS) pass_count=$((pass_count + 1)) ;;
+    FAIL) fail_count=$((fail_count + 1)) ;;
+    WARN) warn_count=$((warn_count + 1)) ;;
+    SKIP) skip_count=$((skip_count + 1)) ;;
+    *)
+      printf 'internal error: unknown check status %s\n' "$status" >&2
+      exit 2
+      ;;
+  esac
+
+  printf '%s %s: %s\n' "$status" "$name" "$detail"
+}
+
+one_line() {
+  local text
+  text="$1"
+  text="${text//$'\n'/; }"
+  printf '%s' "$text"
+}
+
+parse_env_output() {
+  local line
+  local name
+  local value
+
+  while IFS= read -r line; do
+    name="${line%%=*}"
+    value="${line#*=}"
+    case "$name" in
+      ALBION_AUTH_LANE) doctor_auth_lane="$value" ;;
+      ANTHROPIC_BASE_URL) doctor_base_url="$value" ;;
+      ANTHROPIC_AUTH_TOKEN) doctor_auth_token="$value" ;;
+      ANTHROPIC_DEFAULT_OPUS_MODEL) doctor_opus_model="$value" ;;
+      TOKEN_STATE) doctor_token_state="$value" ;;
+    esac
+  done <<<"$1"
+}
+
+load_albion_env() {
+  local output
+
+  if [ ! -f "$env_script" ]; then
+    doctor_env_error="env/albion-env.sh not found; restore ${env_script}"
+    return 1
+  fi
+
+  if output="$(bash -c '
+      set -euo pipefail
+      # shellcheck source=env/albion-env.sh
+      . "$1"
+      if [ -n "${ALBION_DOCTOR_BASE_URL_OVERRIDE+x}" ]; then
+        export ANTHROPIC_BASE_URL="${ALBION_DOCTOR_BASE_URL_OVERRIDE}"
+      fi
+      printf "ALBION_AUTH_LANE=%s\n" "${ALBION_AUTH_LANE:-}"
+      printf "ANTHROPIC_BASE_URL=%s\n" "${ANTHROPIC_BASE_URL:-}"
+      printf "ANTHROPIC_DEFAULT_OPUS_MODEL=%s\n" "${ANTHROPIC_DEFAULT_OPUS_MODEL:-}"
+      if [ -n "${ANTHROPIC_AUTH_TOKEN+x}" ] && [ -n "${ANTHROPIC_AUTH_TOKEN}" ]; then
+        printf "TOKEN_STATE=set\n"
+        printf "ANTHROPIC_AUTH_TOKEN=%s\n" "${ANTHROPIC_AUTH_TOKEN}"
+      else
+        printf "TOKEN_STATE=unset\n"
+        printf "ANTHROPIC_AUTH_TOKEN=\n"
+      fi
+    ' bash "$env_script" 2>"$env_error_file")"; then
+    parse_env_output "$output"
+    doctor_env_loaded=1
+    doctor_env_error=""
+    return 0
+  fi
+
+  doctor_env_error="$(cat "$env_error_file")"
+  return 1
+}
+
+check_env() {
+  if load_albion_env; then
+    record_check "PASS" "env" "lane=${doctor_auth_lane} token=***${doctor_token_state}***"
+    return 0
+  fi
+
+  record_check "FAIL" "env" "$(one_line "${doctor_env_error}")"
+}
+
+check_claude_binary() {
+  if claude_path="$(command -v claude 2>/dev/null)"; then
+    record_check "PASS" "claude-binary" "${claude_path}"
+    return 0
+  fi
+
+  record_check "FAIL" "claude-binary" "claude not found on PATH; install Claude Code or add claude to PATH"
+}
+
+version_at_least() {
+  local major
+  local minor
+  local patch
+  local target_major
+  local target_minor
+  local target_patch
+
+  major="$1"
+  minor="$2"
+  patch="$3"
+  target_major="$4"
+  target_minor="$5"
+  target_patch="$6"
+
+  if [ "$major" -gt "$target_major" ]; then
+    return 0
+  fi
+  if [ "$major" -lt "$target_major" ]; then
+    return 1
+  fi
+  if [ "$minor" -gt "$target_minor" ]; then
+    return 0
+  fi
+  if [ "$minor" -lt "$target_minor" ]; then
+    return 1
+  fi
+  [ "$patch" -ge "$target_patch" ]
+}
+
+check_claude_version() {
+  local version_output
+  local major
+  local minor
+  local patch
+  local parsed_version
+
+  if [ -z "$claude_path" ]; then
+    record_check "SKIP" "claude-version" "claude binary not found"
+    return 0
+  fi
+
+  if ! version_output="$(claude --version 2>&1)"; then
+    record_check "WARN" "claude-version" "could not run claude --version: $(one_line "$version_output")"
+    return 0
+  fi
+
+  if [[ ! "$version_output" =~ ([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+    record_check "WARN" "claude-version" "unparseable claude --version output: $(one_line "$version_output")"
+    return 0
+  fi
+
+  major="${BASH_REMATCH[1]}"
+  minor="${BASH_REMATCH[2]}"
+  patch="${BASH_REMATCH[3]}"
+  parsed_version="${major}.${minor}.${patch}"
+
+  if ! version_at_least "$major" "$minor" "$patch" 2 1 163; then
+    record_check "FAIL" "claude-version" "Claude Code ${parsed_version} is below 2.1.163; upgrade Claude Code for Albion stop-gate and matcher semantics"
+    return 0
+  fi
+
+  if ! version_at_least "$major" "$minor" "$patch" 2 1 195; then
+    record_check "WARN" "claude-version" "Claude Code ${parsed_version} meets minimum 2.1.163 but 2.1.195 or newer is preferred"
+    return 0
+  fi
+
+  record_check "PASS" "claude-version" "Claude Code ${parsed_version}"
+}
+
+check_endpoint_shape() {
+  if [ "$doctor_env_loaded" -ne 1 ]; then
+    record_check "SKIP" "endpoint-shape" "env did not load"
+    return 0
+  fi
+
+  case "$doctor_base_url" in
+    */api/anthropic)
+      record_check "PASS" "endpoint-shape" "${doctor_base_url}"
+      ;;
+    *)
+      record_check "FAIL" "endpoint-shape" "ANTHROPIC_BASE_URL=${doctor_base_url}; expected an endpoint ending in /api/anthropic, not the documented trap /api/paas/v4"
+      ;;
+  esac
+}
+
+check_tmux() {
+  local tmux_path
+
+  if tmux_path="$(command -v tmux 2>/dev/null)"; then
+    record_check "PASS" "tmux" "${tmux_path}"
+    return 0
+  fi
+
+  record_check "WARN" "tmux" "tmux not found on PATH; conductor features unavailable"
+}
+
+check_fixtures() {
+  local output
+
+  if [ ! -f "$fixture_validator" ]; then
+    record_check "SKIP" "fixtures" "validator missing at ${fixture_validator}"
+    return 0
+  fi
+
+  if [ ! -d "$fixtures_dir" ]; then
+    record_check "SKIP" "fixtures" "fixtures missing at ${fixtures_dir}"
+    return 0
+  fi
+
+  if output="$(bash "$fixture_validator" "$fixtures_dir" 2>&1)"; then
+    record_check "PASS" "fixtures" "$(one_line "$output")"
+    return 0
+  fi
+
+  record_check "FAIL" "fixtures" "$(one_line "$output"); rerun or repair hook fixtures"
+}
+
+check_hook_suite() {
+  record_check "SKIP" "hook-suite" "not installed (arrives in M2)"
+}
+
+strip_model_suffix() {
+  local model
+  model="$1"
+  if [[ "$model" == *"[1m]" ]]; then
+    model="${model%????}"
+  fi
+  printf '%s' "$model"
+}
+
+build_live_payload() {
+  local model
+  model="$(strip_model_suffix "$doctor_opus_model")"
+
+  python3 - "$model" <<'PY'
+import json
+import sys
+
+model = sys.argv[1]
+payload = {
+    "model": model,
+    "max_tokens": 1,
+    "messages": [{"role": "user", "content": "ping"}],
+}
+print(json.dumps(payload, separators=(",", ":")))
+PY
+}
+
+doctor_curl() {
+  local curl_cmd
+  local url
+  local payload
+
+  curl_cmd="${ALBION_DOCTOR_CURL:-curl}"
+  url="$1"
+  payload="$2"
+
+  "$curl_cmd" \
+    --silent \
+    --show-error \
+    --connect-timeout 30 \
+    --max-time 30 \
+    --request POST \
+    "$url" \
+    --header "content-type: application/json" \
+    --header "x-api-key: ${doctor_auth_token}" \
+    --header "Authorization: Bearer ${doctor_auth_token}" \
+    --data "$payload" \
+    --write-out $'\n%{http_code}'
+}
+
+json_value() {
+  local field
+  field="$1"
+
+  python3 -c '
+import json
+import sys
+
+field = sys.argv[1]
+try:
+    payload = json.load(sys.stdin)
+except json.JSONDecodeError:
+    print("")
+    sys.exit(0)
+
+if field == "model":
+    value = payload.get("model", "")
+elif field == "error.message":
+    error = payload.get("error", {})
+    value = error.get("message", "") if isinstance(error, dict) else ""
+else:
+    value = ""
+
+print(value if isinstance(value, str) else "")
+' "$field"
+}
+
+check_live_probe() {
+  local payload
+  local probe_url
+  local response
+  local body
+  local http_status
+  local response_model
+  local error_message
+
+  if [ "$doctor_env_loaded" -ne 1 ]; then
+    record_check "SKIP" "live-probe" "env did not load; no token resolves"
+    return 0
+  fi
+
+  if [ "$doctor_token_state" != "set" ]; then
+    record_check "SKIP" "live-probe" "no token resolves"
+    return 0
+  fi
+
+  payload="$(build_live_payload)"
+  probe_url="${doctor_base_url}/v1/messages"
+
+  if ! response="$(doctor_curl "$probe_url" "$payload" 2>"$curl_error_file")"; then
+    record_check "FAIL" "live-probe" "curl failed: $(one_line "$(cat "$curl_error_file")")"
+    return 0
+  fi
+
+  http_status="${response##*$'\n'}"
+  if [ "$http_status" = "$response" ]; then
+    record_check "FAIL" "live-probe" "curl response did not include an HTTP status"
+    return 0
+  fi
+  body="${response%$'\n'*}"
+
+  if [ "$http_status" != "200" ]; then
+    error_message="$(printf '%s' "$body" | json_value "error.message")"
+    if [ -n "$error_message" ]; then
+      record_check "FAIL" "live-probe" "HTTP ${http_status}: ${error_message}"
+    else
+      record_check "FAIL" "live-probe" "HTTP ${http_status}: request failed"
+    fi
+    return 0
+  fi
+
+  response_model="$(printf '%s' "$body" | json_value "model")"
+  case "$response_model" in
+    glm-5.2*)
+      record_check "PASS" "live-probe" "HTTP 200 model=${response_model}"
+      ;;
+    *)
+      record_check "FAIL" "live-probe" "HTTP 200 model=${response_model:-unknown}; expected glm-5.2*, possible silent slot remap"
+      ;;
+  esac
+}
+
+parse_args() {
+  live_mode=0
+
+  if [ -n "${ALBION_STUB_RECORD:-}" ] && [ "$#" -eq 1 ] && [ "${1:-}" = "--verbose" ]; then
+    printf '%s\n' 'doctor not installed yet' >&2
+    exit 3
+  fi
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --offline)
+        live_mode=0
+        ;;
+      --live)
+        live_mode=1
+        ;;
+      --help)
+        print_usage
+        exit 0
+        ;;
+      *)
+        printf 'unknown flag: %s\n' "$1" >&2
+        print_usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+run_checks() {
+  local check
+  local -a checks
+
+  checks=(
+    check_env
+    check_claude_binary
+    check_claude_version
+    check_endpoint_shape
+    check_tmux
+    check_fixtures
+    check_hook_suite
+  )
+
+  if [ "$live_mode" -eq 1 ]; then
+    checks+=(check_live_probe)
+  fi
+
+  for check in "${checks[@]}"; do
+    "$check"
+  done
+}
+
+main() {
+  local script_dir
+
+  script_dir="$(resolve_script_dir)"
+  repo_root="$(cd "${script_dir}/.." && pwd)"
+  env_script="${repo_root}/env/albion-env.sh"
+  fixture_validator="${repo_root}/tests/tools/capture/validate-fixtures.sh"
+  fixtures_dir="${repo_root}/tests/fixtures/hooks"
+  doctor_tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/albion-doctor.XXXXXX")"
+  env_error_file="${doctor_tmp_dir}/env.err"
+  curl_error_file="${doctor_tmp_dir}/curl.err"
+  pass_count=0
+  fail_count=0
+  warn_count=0
+  skip_count=0
+  claude_path=""
+  doctor_env_loaded=0
+  doctor_env_error=""
+  doctor_auth_lane=""
+  doctor_auth_token=""
+  doctor_base_url=""
+  doctor_opus_model=""
+  doctor_token_state="unset"
+
+  trap 'rm -rf "$doctor_tmp_dir"' EXIT
+
+  parse_args "$@"
+  run_checks
+
+  printf '%d pass, %d fail, %d warn, %d skip\n' "$pass_count" "$fail_count" "$warn_count" "$skip_count"
+
+  if [ "$fail_count" -ne 0 ]; then
+    return 1
+  fi
+}
+
+main "$@"
