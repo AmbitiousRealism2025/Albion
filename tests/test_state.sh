@@ -134,7 +134,7 @@ test_state_usage_and_file_mode() {
 
   run_state mode-set set --file "$state_file" --key schema_version --value 1
   assert_exit_code 0 "$RUN_CODE" "set succeeds before mode check"
-  mode="$(stat -f '%Lp' "$state_file" 2>/dev/null || stat -c '%a' "$state_file")"
+  mode="$(python3 -c 'import os, sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777)[2:])' "$state_file")"
   assert_eq "600" "$mode" "state files are created mode 0600"
 }
 
