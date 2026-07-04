@@ -239,6 +239,156 @@ reset_block_counter() {
   fi
 }
 
+write_completion_manifest() {
+  local session_id
+  local state_json
+  local workbench_root
+  local manifest_path
+  session_id="$1"
+  state_json="$2"
+  workbench_root="$3"
+  manifest_path="${ALBION_MANIFEST_PATH:-$PWD/.albion/completion-manifest.json}"
+
+  if ! ALBION_STATE_JSON="$state_json" python3 - "$session_id" "$workbench_root" "$manifest_path" <<'PY' 2>>"${ALBION_GATE_LOG:-/dev/null}"
+from __future__ import annotations
+
+import json
+import math
+import os
+import re
+import sys
+import tempfile
+import unicodedata
+from datetime import datetime, timezone
+from pathlib import Path
+
+session_id = sys.argv[1]
+workbench_root = Path(sys.argv[2])
+manifest_path = Path(sys.argv[3])
+
+try:
+    state = json.loads(os.environ.get("ALBION_STATE_JSON", "{}"))
+except json.JSONDecodeError:
+    state = {}
+if not isinstance(state, dict):
+    state = {}
+
+
+def open_task_count(value: object, default: int = 0) -> int:
+    try:
+        if isinstance(value, bool):
+            return default
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            if math.isfinite(value) and value >= 1:
+                return int(value)
+            return default
+        if isinstance(value, str):
+            stripped = value.strip()
+            if re.fullmatch(r"[+-]?\d+", stripped):
+                return int(stripped, 10)
+    except (OverflowError, ValueError):
+        return default
+    return default
+
+
+def string_value(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def normalized_status(value: object) -> str:
+    return string_value(value).strip().lower()
+
+
+def task_is_nontrivial(task_text: str) -> bool:
+    stripped = task_text.strip()
+    if stripped == "":
+        return False
+    lowered = stripped.lower()
+    trivial_markers = (
+        r"(?m)^\s*trivial\s*:\s*true\s*$",
+        r"(?m)^\s*non-?trivial\s*:\s*false\s*$",
+        r"(?m)^\s*(complexity|tier)\s*:\s*trivial\s*$",
+    )
+    return not any(re.search(pattern, lowered) for pattern in trivial_markers)
+
+
+def is_empty_verification(text: str) -> bool:
+    visible_text = "".join(ch for ch in text if unicodedata.category(ch) != "Cf")
+    return visible_text.strip() == ""
+
+
+def workbench_tasks(root: Path) -> list[dict[str, object]]:
+    fable_root = root / "fable-mode"
+    if not fable_root.is_dir():
+        return []
+
+    tasks: list[dict[str, object]] = []
+    for task_dir in sorted(path for path in fable_root.iterdir() if path.is_dir()):
+        task_file = task_dir / "task.md"
+        try:
+            task_text = task_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if not task_is_nontrivial(task_text):
+            continue
+
+        verification_file = task_dir / "verification.md"
+        try:
+            verification_text = verification_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            verification_text = ""
+        tasks.append(
+            {
+                "slug": task_dir.name,
+                "verification_present": not is_empty_verification(verification_text),
+            }
+        )
+    return tasks
+
+
+tasks_state = state.get("tasks")
+last_test = state.get("last_test")
+last_test_status = (
+    normalized_status(last_test.get("status")) if isinstance(last_test, dict) else ""
+)
+manifest = {
+    "schema": "albion-completion-manifest/v1",
+    "session_id": session_id,
+    "written_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+    "status": "complete",
+    "last_test": last_test_status if last_test_status in {"pass", "fail"} else "unknown",
+    "workbench_tasks": workbench_tasks(workbench_root),
+    "open_task_count": open_task_count(tasks_state.get("open") if isinstance(tasks_state, dict) else None),
+}
+
+manifest_path.parent.mkdir(parents=True, exist_ok=True)
+with tempfile.NamedTemporaryFile(
+    "w",
+    encoding="utf-8",
+    dir=str(manifest_path.parent),
+    prefix=f".{manifest_path.name}.",
+    suffix=".tmp",
+    delete=False,
+) as handle:
+    temp_path = Path(handle.name)
+    json.dump(manifest, handle, sort_keys=True, separators=(",", ":"))
+    handle.write("\n")
+try:
+    temp_path.replace(manifest_path)
+except Exception:
+    try:
+        temp_path.unlink()
+    except OSError:
+        pass
+    raise
+PY
+  then
+    log_line "stop-gate: failed to write completion manifest for ${session_id}"
+  fi
+}
+
 run_hook() {
   local payload
   local script_dir
@@ -304,6 +454,7 @@ run_hook() {
 
   if [ "$reason" = "" ]; then
     reset_block_counter "$session_id"
+    write_completion_manifest "$session_id" "$state_json" "$workbench_root"
     return 0
   fi
 

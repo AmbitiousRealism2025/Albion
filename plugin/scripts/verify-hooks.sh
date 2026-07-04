@@ -145,6 +145,7 @@ run_hook() {
     ALBION_STRIKES_LOG="${TMP_DIR}/${hook_name}.strikes.log" \
     ALBION_SCRUBBER_LOG="${TMP_DIR}/${hook_name}.scrubber.log" \
     ALBION_GATE_LOG="${TMP_DIR}/${hook_name}.gate.log" \
+    ALBION_MANIFEST_PATH="${TMP_DIR}/${hook_name}.completion-manifest.json" \
     ALBION_INJECT_LOG="${TMP_DIR}/${hook_name}.inject.log" \
     "$script_path" >"$out_file" 2>"$err_file" <<<"$payload"
   RUN_CODE=$?
