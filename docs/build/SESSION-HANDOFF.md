@@ -8,9 +8,9 @@ This is the rehydration document for a new conductor session. It exists because 
 
 ## [LIVE] Where we are right now
 
-**Date of handoff:** 2026-07-04 (updated same day, M3 session)
-**Milestone complete:** M3 — **SEALED** (build logs 009–011): code CI-green, live exit test passed in three escalating rounds (log 011; fixture preserved at `~/Desktop/coding-projects/albion-m3-exit-test` for the M5 bench corpus).
-**Next milestone:** **M4 — vision subsystem + Conductor skill.**
+**Date of handoff:** 2026-07-04 (updated same day; M3 and M4 both sealed this session)
+**Milestone complete:** M4 — **SEALED** (build log 012): vision CLI + image hook + completion manifest + conductor skill, both exit criteria live-verified. **Critical fix shipped:** hooks.json array-form commands never registered — the enforcement layer was inert in every real session until `57dcdae`; it is live now (log 012 has the full postmortem + the registration-smoke-check backlog item). M3 sealed earlier same day (logs 009–011; fixture at `~/Desktop/coding-projects/albion-m3-exit-test`, now the M5 bench seed).
+**Next milestone:** **M5 — telemetry + bench** (three-arm A/B: albion / vanilla / stock; headline questions in log 012 §Observations — workbench-tier engagement *with enforcement on*, last_test detection, dual-cost-model telemetry per lane).
 **Conductor for the next session should be:** Fable 5.
 **Carry-forward observations:** (1) the intent gate classified all three exit-test rounds Explicit — the workbench tier has never engaged solo; this is a first-class M5 bench question. (2) **Vision-lane verdict is in** (research report 11, local): plan tokens DO authorize direct GLM-4.6V calls via `api.z.ai/api/anthropic/v1/messages` (probe: HTTP 200, real vision, prompt-metered); paas/v4 rejects plan tokens entirely (429/1113); MCP server is a wrapper and is NOT needed. `albion-vision` = direct HTTP, two lanes, 1113/1211 diagnostics. (3) Worker sandboxing pattern for the Conductor skill: `--permission-mode acceptEdits --allowedTools "Bash(<narrow>:*)"`, not bypassPermissions. (4) User-held key now provisioned via `~/.albion/secrets.zsh` sourced from `~/.zshenv` (setup script `~/.albion/albion-key-setup.sh`).
 
