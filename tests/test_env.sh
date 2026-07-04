@@ -78,7 +78,7 @@ assert_common_exports() {
   assert_export "$output" "CLAUDE_CODE_MAX_OUTPUT_TOKENS" "131072"
   assert_export "$output" "CLAUDE_CODE_ATTRIBUTION_HEADER" "0"
   assert_export "$output" "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC" "1"
-  assert_export "$output" "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB" "1"
+  assert_export "$output" "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB" "0"
   assert_export "$output" "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP" "4"
   assert_not_contains "$output" "ANTHROPIC_MODEL=" "script does not set ANTHROPIC_MODEL"
   assert_not_contains "$output" "MAX_THINKING_TOKENS=" "script does not set MAX_THINKING_TOKENS"
@@ -136,6 +136,17 @@ assert_exit_code 0 "$RUN_CODE" "override lane sources successfully"
 assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_OPUS_MODEL" "custom-opus"
 assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_SONNET_MODEL" "custom-sonnet"
 assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_HAIKU_MODEL" "custom-haiku"
+
+run_source_capture "tuning-overrides-core-hard-set" 'export ALBION_ZAI_PLAN_TOKEN=plan-token API_TIMEOUT_MS=123 CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 ANTHROPIC_BASE_URL=https://wrong.example ANTHROPIC_AUTH_TOKEN=wrong-token ANTHROPIC_DEFAULT_OPUS_MODEL=wrong-opus ANTHROPIC_DEFAULT_SONNET_MODEL=wrong-sonnet ANTHROPIC_DEFAULT_HAIKU_MODEL=wrong-haiku'
+assert_exit_code 0 "$RUN_CODE" "tuning overrides source successfully"
+assert_export "$RUN_STDOUT" "API_TIMEOUT_MS" "123"
+assert_export "$RUN_STDOUT" "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB" "1"
+assert_export "$RUN_STDOUT" "CLAUDE_CODE_AUTO_COMPACT_WINDOW" "1000000"
+assert_export "$RUN_STDOUT" "ANTHROPIC_BASE_URL" "https://api.z.ai/api/anthropic"
+assert_export "$RUN_STDOUT" "ANTHROPIC_AUTH_TOKEN" "plan-token"
+assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_OPUS_MODEL" "glm-5.2[1m]"
+assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_SONNET_MODEL" "glm-5.2[1m]"
+assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_HAIKU_MODEL" "glm-5-turbo"
 
 run_source_capture "double-source" \
   'export ALBION_ZAI_PLAN_TOKEN=first-token' \

@@ -102,6 +102,10 @@ run_launcher() {
     env_vars+=("ALBION_ZAI_TOKEN=test-token")
   fi
 
+  if [ -n "${ALBION_MODEL+x}" ]; then
+    env_vars+=("ALBION_MODEL=${ALBION_MODEL}")
+  fi
+
   case "$charter_mode" in
     set) env_vars+=("ALBION_CHARTER=${charter_value}") ;;
     unset) ;;
@@ -150,6 +154,26 @@ assert_contains "$RUN_RECORD" "argv[5]=--flag=value" "passthrough flag reaches c
 assert_not_contains "$RUN_STDERR" "test-token" "default mode does not print token"
 assert_not_contains "$RUN_STDOUT" "test-token" "default mode stdout does not print token"
 
+stub_path="$(make_stub_path injected-model)"
+run_launcher "injected-model" "$stub_path" set "$charter_path" with-token "${ROOT_DIR}/bin/albion" \
+  "prompt with default model"
+assert_exit_code 0 "$RUN_CODE" "default mode injects default model"
+assert_contains "$RUN_RECORD" "argc=5" "default model injection preserves passthrough count after charter and model args"
+assert_contains "$RUN_RECORD" "argv[0]=--append-system-prompt" "default model keeps charter flag first"
+assert_contains "$RUN_RECORD" "argv[1]=temporary Albion charter" "default model keeps charter content second"
+assert_contains "$RUN_RECORD" "argv[2]=--model" "default mode injects model flag"
+assert_contains "$RUN_RECORD" "argv[3]=glm-5.2[1m]" "default mode injects GLM model"
+assert_contains "$RUN_RECORD" "argv[4]=prompt with default model" "default model preserves passthrough"
+
+stub_path="$(make_stub_path albion-model)"
+ALBION_MODEL=bar run_launcher "albion-model" "$stub_path" unset "" with-token "${ROOT_DIR}/bin/albion" \
+  "prompt with env model"
+assert_exit_code 0 "$RUN_CODE" "ALBION_MODEL changes injected model"
+assert_contains "$RUN_RECORD" "argc=3" "ALBION_MODEL run has model args plus passthrough"
+assert_contains "$RUN_RECORD" "argv[0]=--model" "ALBION_MODEL injects model flag"
+assert_contains "$RUN_RECORD" "argv[1]=bar" "ALBION_MODEL value reaches claude"
+assert_contains "$RUN_RECORD" "argv[2]=prompt with env model" "ALBION_MODEL preserves passthrough"
+
 link_dir="${TMP_DIR}/linked-bin"
 mkdir -p "$link_dir"
 ln -s "${ROOT_DIR}/bin/albion" "${link_dir}/albion"
@@ -167,7 +191,9 @@ assert_exit_code 0 "$RUN_CODE" "default mode without charter still runs"
 assert_contains "$RUN_STDERR" "running without the orchestration charter" "missing charter warns"
 assert_contains "$RUN_RECORD" "agent=Albion" "missing charter keeps default agent"
 assert_contains "$RUN_RECORD" "append_present=0" "missing charter omits append"
-assert_contains "$RUN_RECORD" "argv[0]=still runs" "missing charter preserves passthrough"
+assert_contains "$RUN_RECORD" "argv[0]=--model" "missing charter injects model flag"
+assert_contains "$RUN_RECORD" "argv[1]=glm-5.2[1m]" "missing charter injects default model"
+assert_contains "$RUN_RECORD" "argv[2]=still runs" "missing charter preserves passthrough"
 
 stub_path="$(make_stub_path vanilla)"
 run_launcher "vanilla" "$stub_path" set "$charter_path" with-token "${ROOT_DIR}/bin/albion" \
@@ -176,7 +202,9 @@ assert_exit_code 0 "$RUN_CODE" "vanilla mode runs"
 assert_eq "" "$RUN_STDERR" "vanilla mode ignores charter without warning"
 assert_contains "$RUN_RECORD" "agent=Albion-vanilla" "vanilla exports control-arm agent name"
 assert_contains "$RUN_RECORD" "append_present=0" "vanilla omits charter append"
-assert_contains "$RUN_RECORD" "argv[0]=control arm" "vanilla preserves passthrough"
+assert_contains "$RUN_RECORD" "argv[0]=--model" "vanilla injects model flag"
+assert_contains "$RUN_RECORD" "argv[1]=glm-5.2[1m]" "vanilla injects default model"
+assert_contains "$RUN_RECORD" "argv[2]=control arm" "vanilla preserves passthrough"
 
 stub_path="$(make_stub_path dry-run-default)"
 run_launcher "dry-run-default" "$stub_path" set "$charter_path" with-token "${ROOT_DIR}/bin/albion" \
@@ -189,8 +217,10 @@ assert_contains "$RUN_STDOUT" "anthropic_auth_token=***set***" "default dry-run 
 assert_contains "$RUN_STDOUT" "opus_model=glm-5.2[1m]" "default dry-run prints opus slot"
 assert_contains "$RUN_STDOUT" "sonnet_model=glm-5.2[1m]" "default dry-run prints sonnet slot"
 assert_contains "$RUN_STDOUT" "haiku_model=glm-5-turbo" "default dry-run prints haiku slot"
+assert_contains "$RUN_STDOUT" "model=glm-5.2[1m]" "default dry-run prints resolved model"
 assert_contains "$RUN_STDOUT" "charter=${charter_path}" "default dry-run prints charter path"
 assert_contains "$RUN_STDOUT" "--append-system-prompt" "default dry-run prints final argv"
+assert_contains "$RUN_STDOUT" "--model glm-5.2\\[1m\\]" "default dry-run prints injected model argv"
 assert_not_contains "$RUN_STDOUT" "test-token" "default dry-run never prints token value"
 assert_not_contains "$RUN_STDERR" "test-token" "default dry-run stderr never prints token value"
 
@@ -200,8 +230,10 @@ run_launcher "dry-run-vanilla" "$stub_path" set "$charter_path" with-token "${RO
 assert_exit_code 0 "$RUN_CODE" "vanilla dry-run exits zero"
 assert_eq "" "$RUN_RECORD" "vanilla dry-run does not invoke claude"
 assert_contains "$RUN_STDOUT" "mode=vanilla" "vanilla dry-run prints mode"
+assert_contains "$RUN_STDOUT" "model=glm-5.2[1m]" "vanilla dry-run prints resolved model"
 assert_contains "$RUN_STDOUT" "charter=(none)" "vanilla dry-run prints no charter"
 assert_not_contains "$RUN_STDOUT" "--append-system-prompt" "vanilla dry-run omits charter append"
+assert_contains "$RUN_STDOUT" "--model glm-5.2\\[1m\\]" "vanilla dry-run prints injected model argv"
 assert_not_contains "$RUN_STDOUT" "test-token" "vanilla dry-run never prints token value"
 
 run_launcher "missing-token" "$BASE_PATH" set "$charter_path" without-token "${ROOT_DIR}/bin/albion"

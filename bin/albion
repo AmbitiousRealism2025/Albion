@@ -52,6 +52,7 @@ print_dry_run() {
   printf 'opus_model=%s\n' "${ANTHROPIC_DEFAULT_OPUS_MODEL:-}"
   printf 'sonnet_model=%s\n' "${ANTHROPIC_DEFAULT_SONNET_MODEL:-}"
   printf 'haiku_model=%s\n' "${ANTHROPIC_DEFAULT_HAIKU_MODEL:-}"
+  printf 'model=%s\n' "$resolved_model"
   printf 'charter=%s\n' "$charter_display"
   printf 'final_argv='
   quote_argv "${final_argv[@]}"
@@ -95,6 +96,40 @@ source_albion_env() {
   fi
 }
 
+passthrough_model_value() {
+  local i
+  local arg
+  local next_index
+
+  for i in "${!passthrough[@]}"; do
+    arg="${passthrough[$i]}"
+    case "$arg" in
+      --model)
+        next_index=$((i + 1))
+        if [ "$next_index" -lt "${#passthrough[@]}" ]; then
+          printf '%s\n' "${passthrough[$next_index]}"
+        fi
+        return 0
+        ;;
+      --model=*)
+        printf '%s\n' "${arg#--model=}"
+        return 0
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+resolve_model() {
+  if resolved_model="$(passthrough_model_value)"; then
+    model_injected=0
+  else
+    resolved_model="${ALBION_MODEL:-glm-5.2[1m]}"
+    model_injected=1
+  fi
+}
+
 resolve_charter() {
   local candidate
 
@@ -119,6 +154,10 @@ build_final_argv() {
     final_argv+=("--append-system-prompt" "$(cat "$charter_path")")
   fi
 
+  if [ "$model_injected" -eq 1 ]; then
+    final_argv+=("--model" "$resolved_model")
+  fi
+
   if [ "${#passthrough[@]}" -gt 0 ]; then
     final_argv+=("${passthrough[@]}")
   fi
@@ -133,6 +172,8 @@ main() {
   local doctor_requested
   local dry_run
   local charter_path
+  local resolved_model
+  local model_injected
   local -a passthrough
   local -a final_argv
 
@@ -144,6 +185,8 @@ main() {
   doctor_requested=0
   dry_run=0
   charter_path=""
+  resolved_model=""
+  model_injected=0
   passthrough=()
   final_argv=()
 
@@ -166,6 +209,7 @@ main() {
     vanilla) export CLAUDE_AGENT_NAME="Albion-vanilla" ;;
   esac
 
+  resolve_model
   resolve_charter
   build_final_argv
 

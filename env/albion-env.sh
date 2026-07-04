@@ -18,6 +18,20 @@
 #                             override, which disables Albion's per-task effort
 #                             routing through skill and agent frontmatter.
 #
+# Export semantics:
+#   Core routing is Albion-owned. ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN
+#   are hard-set every time; ANTHROPIC_DEFAULT_OPUS_MODEL,
+#   ANTHROPIC_DEFAULT_SONNET_MODEL, and ANTHROPIC_DEFAULT_HAIKU_MODEL are
+#   hard-set unless ALBION_ALLOW_OVERRIDES=1.
+#   Tuning/hardening values are export-if-unset, so callers can deliberately
+#   override API_TIMEOUT_MS, CLAUDE_CODE_AUTO_COMPACT_WINDOW,
+#   CLAUDE_CODE_MAX_OUTPUT_TOKENS, CLAUDE_CODE_ATTRIBUTION_HEADER,
+#   CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC, CLAUDE_CODE_SUBPROCESS_ENV_SCRUB,
+#   and CLAUDE_CODE_STOP_HOOK_BLOCK_CAP before sourcing this file.
+#   CLAUDE_CODE_SUBPROCESS_ENV_SCRUB defaults off because =1 forces headless
+#   Claude Code permission mode to default, breaking scripted acceptEdits
+#   workflows. Revisit this as opt-in hardening in M6.
+#
 # Failure modes:
 #   - CLAUDE_CODE_EFFORT_LEVEL is set: unset it before sourcing this file.
 #   - ALBION_AUTH_LANE is not `plan` or `api`: set it to one of those values.
@@ -85,14 +99,40 @@ else
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"
 fi
 
-export API_TIMEOUT_MS=3000000
-export CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000
-export CLAUDE_CODE_MAX_OUTPUT_TOKENS=131072
+if [ -z "${API_TIMEOUT_MS+x}" ]; then
+  API_TIMEOUT_MS=3000000
+fi
+export API_TIMEOUT_MS
 
-export CLAUDE_CODE_ATTRIBUTION_HEADER=0
-export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
-export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
-export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=4
+if [ -z "${CLAUDE_CODE_AUTO_COMPACT_WINDOW+x}" ]; then
+  CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000
+fi
+export CLAUDE_CODE_AUTO_COMPACT_WINDOW
+
+if [ -z "${CLAUDE_CODE_MAX_OUTPUT_TOKENS+x}" ]; then
+  CLAUDE_CODE_MAX_OUTPUT_TOKENS=131072
+fi
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS
+
+if [ -z "${CLAUDE_CODE_ATTRIBUTION_HEADER+x}" ]; then
+  CLAUDE_CODE_ATTRIBUTION_HEADER=0
+fi
+export CLAUDE_CODE_ATTRIBUTION_HEADER
+
+if [ -z "${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC+x}" ]; then
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+fi
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+
+if [ -z "${CLAUDE_CODE_SUBPROCESS_ENV_SCRUB+x}" ]; then
+  CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0
+fi
+export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB
+
+if [ -z "${CLAUDE_CODE_STOP_HOOK_BLOCK_CAP+x}" ]; then
+  CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=4
+fi
+export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
 
 export ALBION_AUTH_LANE="${albion_auth_lane}"
 export ALBION_ENV_LOADED=1
