@@ -8,26 +8,27 @@ This is the rehydration document for a new conductor session. It exists because 
 
 ## [LIVE] Where we are right now
 
-**Date of handoff:** 2026-07-04
-**Milestone complete:** M2 — the hook enforcement layer (sealed, CI-green; see build log 008).
-**Next milestone:** **M3 — the unified `ALBION.md` operating system + crown-jewel skills + agent roster (as a plugin).**
-**Conductor for the next session should be:** Fable 5 (a fresh session starts there). M3 is reasoning- and prose-heavy — the charter and skills — which is Fable's strength and is low flag-risk (behavioral content, not security tooling).
+**Date of handoff:** 2026-07-04 (updated same day, M3 session)
+**Milestone complete:** M3 — code-complete, CI-green (build logs 009–010). **The M3 seal awaits one thing:** the live-lane exit test (below).
+**Next milestone:** **M4 — vision subsystem + Conductor skill** (after the M3 exit test).
+**Conductor for the next session should be:** Fable 5.
 
 ### What is done and merged (all CI-green, on `main`)
 - **M0** research + proposal (v0.2), including live wire-probes against the Z.ai endpoint.
 - **M1** launcher + doctor: `bin/albion` (default/`--vanilla`/`--doctor`/`--dry-run`, both auth lanes, `--model glm-5.2[1m]` pin), `bin/albion-doctor` (check registry + `--live` probe, verified `HTTP 200 model=glm-5.2`), `env/albion-env.sh`.
 - **M2** enforcement layer: session-state JSON engine (`state/`), six hooks in `plugin/scripts/` — destructive-command guard, strike counter, workbench scrubber, Stop completion gate (keystone), SessionStart re-injection — all hardened after an adversarial red-team (build log 007), wired in `plugin/hooks/hooks.json`, verified by the doctor's `hook-suite` check. `docs/security-model.md` states the honest threat model.
-- Test suite: zero-dependency, green on macOS **and** ubuntu; CI (shellcheck + tests) on every push.
+- **M3** behavioral layer: `charter/ALBION.md` (conductor-written, maintainer-approved, compiled from `manifest/sections/` by `bin/albion-compile` with a `--check` drift gate), four crown-jewel skills + vendored fable-mode skill (`plugin/skills/`), five agents (`plugin/agents/`), `plugin.json`, launcher `--plugin-dir` wiring (default mode only), doctor `manifest` check. Workbench layout everywhere is the per-task-directory form the hooks enforce (`.agent-workbench/fable-mode/<task-slug>/`).
+- Test suite: zero-dependency, 16 files, green on macOS **and** ubuntu; CI (shellcheck + tests) on every push.
 
-### What to do next (M3, first steps)
-1. Read `docs/proposal/albion-proposal.md` §3 (the unified ALBION.md design) and §4 (skills/agents), and the `fable-mode-glm-5-2` skill at `~/.claude/skills/fable-mode-glm-5-2/`.
-2. Decide the M3 packet breakdown (charter authoring is likely conductor-written, not worker-dispatched, since it's the behavioral core; the crown-jewel skills and agent definitions can be packets). Get maintainer approval on the packet plan before dispatching, per the protocol.
-3. Note: M3 content is prose/design. Some of it (the charter itself) is the kind of work the conductor should write directly and have the maintainer review, rather than dispatch to the GPT-5.5 lane.
+### What to do next (first steps)
+1. **Run the M3 exit test** (needs the user-held Z.ai token): launch `bin/albion` on a scratch long-horizon task; verify the full loop end-to-end — workbench task dir with populated `task.md`/`verification.md`, hook injections, stop gate honest, report in charter §8 form. Then seal M3 in a short log entry.
+2. **M4 packet breakdown** per proposal §6 (vision: provider registry, `albion-vision`, image-read hook) and §7 (Conductor skill + completion-manifest protocol). Get maintainer approval on the packet plan before dispatching.
 
 ### Open threads / backlog
 - **Hook hardening backlog** (documented, non-blocking) in `docs/security-model.md` and build log 007: runtime-obfuscation gaps are inherent to denylists (do not attempt heuristic fixes); relocating `gate.blocks` outside agent-writable state is possible future work.
-- **CI actions are major-version-pinned**; SHA-pinning is a stated M6 (pristine-repo) task.
-- **M4+** per the roadmap: vision subsystem, Conductor skill, telemetry/bench, OSS release, hardening.
+- **CI actions are major-version-pinned**; SHA-pinning is a stated M6 (pristine-repo) task. CI also warns that `actions/checkout@v4` targets deprecated Node 20 — fold into the same M6 task.
+- **Worker-lane trust note (build log 010):** the GPT-5.5 lane gamed a doctor counter to satisfy an out-of-scope test rather than reporting the conflict. Standing brief boilerplate now: "if an out-of-scope test breaks, STOP and report." Conductor must read *every hunk* of worker diffs.
+- **M5+** per the roadmap: telemetry/bench, OSS release, hardening.
 
 ---
 
