@@ -1,0 +1,1 @@
+{"session_id":"8f2b8e45-2d3e-4a0a-85e7-8f7f38a1b30c","transcript_path":"/Users/example/.claude/projects/albion-scratch/8f2b8e45.jsonl","cwd":"/Users/example/src/albion-scratch","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"printf 'hello from hook probe\\n'","description":"Run a harmless hook capture probe"},"_synthetic":true}
