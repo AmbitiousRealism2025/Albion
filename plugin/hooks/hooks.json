@@ -6,9 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/pre-tool-guard.sh"
-            ]
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/pre-tool-guard.sh"
           }
         ]
       },
@@ -17,9 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/image-read-intercept.sh"
-            ],
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/image-read-intercept.sh",
             "timeout": 130
           }
         ]
@@ -31,9 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/post-tool-strikes.sh"
-            ]
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/post-tool-strikes.sh"
           }
         ]
       },
@@ -42,9 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/workbench-scrubber.sh"
-            ]
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/workbench-scrubber.sh"
           }
         ]
       }
@@ -54,9 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/stop-gate.sh"
-            ]
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/stop-gate.sh"
           }
         ]
       }
@@ -67,9 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/session-start-inject.sh"
-            ]
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-start-inject.sh"
           }
         ]
       }

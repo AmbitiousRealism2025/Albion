@@ -115,8 +115,11 @@ for event_name, entries in config.get("hooks", {}).items():
         for hook in hooks:
             assert hook.get("type") == "command", f"{event_name} hook type must be command"
             command = hook.get("command")
-            assert isinstance(command, list) and command, f"{event_name} command must be exec-form list"
-            script = command[0].replace("${CLAUDE_PLUGIN_ROOT}", str(plugin_root))
+            # Wire-verified (build log 012): Claude Code only registers hooks
+            # whose command is a string; array-form commands are silently
+            # ignored, leaving the hook inert in real sessions.
+            assert isinstance(command, str) and command, f"{event_name} command must be a non-empty string"
+            script = command.split()[0].replace("${CLAUDE_PLUGIN_ROOT}", str(plugin_root))
             script_path = pathlib.Path(script)
             assert script_path.is_file(), f"referenced script missing: {script_path}"
             assert script_path.stat().st_mode & 0o111, f"referenced script not executable: {script_path}"
