@@ -166,7 +166,10 @@ assert_contains "$RUN_RECORD" "argv[3]=glm-5.2[1m]" "default mode injects GLM mo
 assert_contains "$RUN_RECORD" "argv[4]=prompt with default model" "default model preserves passthrough"
 
 stub_path="$(make_stub_path albion-model)"
-ALBION_MODEL=bar run_launcher "albion-model" "$stub_path" unset "" with-token "${ROOT_DIR}/bin/albion" \
+# Charter must be pinned to a nonexistent path: with ALBION_CHARTER unset the
+# launcher falls back to the repo's real charter/ALBION.md, coupling this
+# model-injection case to repo contents.
+ALBION_MODEL=bar run_launcher "albion-model" "$stub_path" set "$missing_charter" with-token "${ROOT_DIR}/bin/albion" \
   "prompt with env model"
 assert_exit_code 0 "$RUN_CODE" "ALBION_MODEL changes injected model"
 assert_contains "$RUN_RECORD" "argc=3" "ALBION_MODEL run has model args plus passthrough"
