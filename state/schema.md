@@ -46,11 +46,13 @@ truncated to 200 characters. `at` is a UTC ISO-8601 timestamp ending in `Z`.
 
 Detection strips leading environment assignments and leading `cd ... &&`
 prefixes, then matches only these test command forms: `tests/run.sh`,
-`bash tests/run.sh`, `bash`/`sh`/`python3` running a path segment named
-`run_test.py`, `run_tests.py`, or `test_<name>.sh`/`test_<name>.py`, and the
-package or language test commands `pytest`, `npm test`, `yarn test`,
-`pnpm test`, `go test`, `cargo test`, `make test`, or `make check`. Non-Bash
-tools and non-test Bash commands do not write `last_test`.
+`bash tests/run.sh`, `bash`/`sh`/`python`/`python3` running a path segment
+named `run_test.py`, `run_tests.py`, or `test_<name>.sh`/`test_<name>.py`,
+the module forms `python`/`python3 -m unittest ...` and
+`python`/`python3 -m pytest ...`, and the package or language test commands
+`pytest`, `npm test`, `yarn test`, `pnpm test`, `go test`, `cargo test`,
+`make test`, or `make check`. Non-Bash tools and non-test Bash commands do
+not write `last_test`.
 
 `notes`
 

@@ -129,13 +129,19 @@ def is_test_command(command):
 
     first = tokens[0]
     second = tokens[1] if len(tokens) > 1 else ""
+    third = tokens[2] if len(tokens) > 2 else ""
 
     if first == "tests/run.sh":
         return True
     if first == "bash" and second == "tests/run.sh":
         return True
 
-    if first in {"bash", "sh", "python3"} and second:
+    # Module-form invocations are unambiguous test runs (first live bench run
+    # used python -m unittest and slipped past the original list).
+    if first in {"python", "python3"} and second == "-m" and third in {"unittest", "pytest"}:
+        return True
+
+    if first in {"bash", "sh", "python", "python3"} and second:
         return path_segment_matches(second, r"run_tests?\.py") or path_segment_matches(
             second, r"test_[^ /]+\.(sh|py)"
         )

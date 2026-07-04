@@ -304,6 +304,20 @@ test_failing_run_tests_py_records_last_test_fail() {
   assert_eq "1" "$(state_get "$state_dir" "$session_id" strikes.Bash__python3 missing)" "failing test still records strike"
 }
 
+test_module_form_unittest_records_last_test() {
+  local state_dir
+  local session_id
+  local payload
+  session_id="strike-session-last-test-module"
+  state_dir="${TMP_DIR}/last-test-module.state"
+  payload="$(bash_payload "$session_id" "python -m unittest tests.test_report -v" 0 "OK\n")"
+
+  run_hook_in_state "last-test-module" "$payload" "$state_dir"
+  assert_exit_code 0 "$RUN_CODE" "module-form test payload exits zero"
+  assert_eq "pass" "$(state_get "$state_dir" "$session_id" last_test.status missing)" "python -m unittest records pass"
+  assert_eq "python -m unittest tests.test_report -v" "$(state_get "$state_dir" "$session_id" last_test.command missing)" "module-form records command"
+}
+
 test_failing_non_test_command_leaves_last_test_untouched() {
   local state_dir
   local session_id
@@ -400,6 +414,7 @@ test_distinct_operations_keep_independent_counters
 test_bash_failure_detection_is_conservative
 test_passing_tests_run_records_last_test_pass
 test_failing_run_tests_py_records_last_test_fail
+test_module_form_unittest_records_last_test
 test_failing_non_test_command_leaves_last_test_untouched
 test_last_test_overwrites_prior_failure_with_pass
 test_last_test_command_is_truncated_to_200_chars
