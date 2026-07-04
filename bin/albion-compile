@@ -1,0 +1,277 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+print_usage() {
+  cat <<'USAGE'
+Usage: albion-compile [--check] [--manifest PATH] [--output PATH] [--help]
+
+Compiles charter/ALBION.md from manifest/albion-manifest.yaml section fragments.
+Default mode rewrites the output file. --check reports drift without writing.
+USAGE
+}
+
+resolve_script_dir() {
+  local source_path
+  local source_dir
+
+  source_path="${BASH_SOURCE[0]}"
+  while [ -h "$source_path" ]; do
+    source_dir="$(cd -P "$(dirname "$source_path")" && pwd)"
+    source_path="$(readlink "$source_path")"
+    case "$source_path" in
+      /*) ;;
+      *) source_path="${source_dir}/${source_path}" ;;
+    esac
+  done
+
+  cd -P "$(dirname "$source_path")" && pwd
+}
+
+abspath_from_repo() {
+  local path
+  path="$1"
+
+  case "$path" in
+    /*) printf '%s\n' "$path" ;;
+    *) printf '%s/%s\n' "$repo_root" "$path" ;;
+  esac
+}
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --check)
+        check_mode=1
+        ;;
+      --manifest)
+        if [ "$#" -lt 2 ]; then
+          printf '%s\n' 'albion-compile: --manifest requires a path' >&2
+          exit 2
+        fi
+        manifest_path="$(abspath_from_repo "$2")"
+        shift
+        ;;
+      --output)
+        if [ "$#" -lt 2 ]; then
+          printf '%s\n' 'albion-compile: --output requires a path' >&2
+          exit 2
+        fi
+        output_path="$(abspath_from_repo "$2")"
+        shift
+        ;;
+      --help|-h)
+        print_usage
+        exit 0
+        ;;
+      *)
+        printf 'albion-compile: unknown argument: %s\n' "$1" >&2
+        print_usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+run_compiler() {
+  python3 - "$repo_root" "$manifest_path" "$output_path" "$check_mode" <<'PY'
+from __future__ import annotations
+
+import difflib
+import pathlib
+import sys
+
+
+class ManifestError(Exception):
+    pass
+
+
+def fail(message: str, code: int = 1) -> None:
+    print(f"albion-compile: {message}", file=sys.stderr)
+    raise SystemExit(code)
+
+
+def parse_key_value(text: str, line_number: int) -> tuple[str, str]:
+    if ":" not in text:
+        raise ManifestError(f"line {line_number}: expected key: value")
+    key, value = text.split(":", 1)
+    key = key.strip()
+    value = value.strip()
+    if not key:
+        raise ManifestError(f"line {line_number}: empty key")
+    if not value:
+        raise ManifestError(f"line {line_number}: empty value for {key}")
+    if key.startswith("-"):
+        raise ManifestError(f"line {line_number}: malformed key {key}")
+    return key, value
+
+
+def parse_manifest(path: pathlib.Path) -> dict[str, object]:
+    scalars: dict[str, str] = {}
+    lists: dict[str, list[dict[str, str]]] = {}
+    current_list: str | None = None
+    current_item: dict[str, str] | None = None
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        fail(f"manifest not found: {path}", 2)
+
+    for line_number, raw_line in enumerate(lines, start=1):
+        if "\t" in raw_line:
+            raise ManifestError(f"line {line_number}: tabs are not supported")
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        if not raw_line.startswith(" "):
+            key, separator, value = raw_line.partition(":")
+            key = key.strip()
+            value = value.strip()
+            if not separator or not key:
+                raise ManifestError(f"line {line_number}: expected top-level key")
+            current_item = None
+            if value:
+                scalars[key] = value
+                current_list = None
+            else:
+                current_list = key
+                lists.setdefault(key, [])
+            continue
+
+        if raw_line.startswith("  - "):
+            if current_list is None:
+                raise ManifestError(f"line {line_number}: list item outside a list")
+            key, value = parse_key_value(raw_line[4:], line_number)
+            current_item = {key: value}
+            lists[current_list].append(current_item)
+            continue
+
+        if raw_line.startswith("    "):
+            if current_item is None:
+                raise ManifestError(f"line {line_number}: map entry outside a list item")
+            key, value = parse_key_value(raw_line[4:], line_number)
+            if key in current_item:
+                raise ManifestError(f"line {line_number}: duplicate key {key}")
+            current_item[key] = value
+            continue
+
+        raise ManifestError(f"line {line_number}: unsupported indentation")
+
+    return {**scalars, **lists}
+
+
+def repo_relative(root: pathlib.Path, path: pathlib.Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def resolve_path(root: pathlib.Path, value: str) -> pathlib.Path:
+    path = pathlib.Path(value)
+    if path.is_absolute():
+        return path
+    return root / path
+
+
+def require_manifest_shape(manifest: dict[str, object]) -> list[dict[str, str]]:
+    if manifest.get("schema") != "albion-manifest/v1":
+        raise ManifestError("schema must be albion-manifest/v1")
+    charter = manifest.get("charter")
+    if not isinstance(charter, list) or not charter:
+        raise ManifestError("charter list is required")
+    for index, entry in enumerate(charter, start=1):
+        if not isinstance(entry, dict):
+            raise ManifestError(f"charter entry {index}: expected map")
+        expected = {"id", "target", "file"}
+        actual = set(entry)
+        if actual != expected:
+            raise ManifestError(
+                f"charter entry {index}: expected keys {sorted(expected)}, got {sorted(actual)}"
+            )
+        if entry["target"] != "claude-code":
+            raise ManifestError(f"charter entry {index}: unsupported target {entry['target']}")
+    return charter
+
+
+def compile_charter(root: pathlib.Path, charter: list[dict[str, str]]) -> bytes:
+    compiled = bytearray()
+    for entry in charter:
+        fragment_path = resolve_path(root, entry["file"])
+        try:
+            compiled.extend(fragment_path.read_bytes())
+        except FileNotFoundError:
+            fail(f"fragment not found for {entry['id']}: {fragment_path}", 2)
+    return bytes(compiled)
+
+
+def print_drift(root: pathlib.Path, output_path: pathlib.Path, expected: bytes, actual: bytes) -> None:
+    expected_text = expected.decode("utf-8")
+    actual_text = actual.decode("utf-8")
+    expected_name = "compiled manifest"
+    actual_name = repo_relative(root, output_path)
+    print(f"FAIL charter drift detected: {actual_name} differs from manifest output", file=sys.stderr)
+    diff = difflib.unified_diff(
+        actual_text.splitlines(keepends=True),
+        expected_text.splitlines(keepends=True),
+        fromfile=actual_name,
+        tofile=expected_name,
+    )
+    sys.stderr.writelines(diff)
+
+
+def main() -> int:
+    root = pathlib.Path(sys.argv[1])
+    manifest_path = pathlib.Path(sys.argv[2])
+    output_path = pathlib.Path(sys.argv[3])
+    check_mode = sys.argv[4] == "1"
+
+    try:
+        manifest = parse_manifest(manifest_path)
+        charter = require_manifest_shape(manifest)
+    except ManifestError as exc:
+        fail(str(exc), 2)
+
+    compiled = compile_charter(root, charter)
+
+    if check_mode:
+        try:
+            actual = output_path.read_bytes()
+        except FileNotFoundError:
+            fail(f"output not found: {output_path}", 2)
+        if compiled == actual:
+            print(f"PASS charter in sync: {repo_relative(root, output_path)}")
+            return 0
+        print_drift(root, output_path, compiled, actual)
+        return 1
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(compiled)
+    print(f"wrote {repo_relative(root, output_path)} from {len(charter)} fragments")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY
+}
+
+main() {
+  local script_dir
+  local repo_root
+  local manifest_path
+  local output_path
+  local check_mode
+
+  script_dir="$(resolve_script_dir)"
+  repo_root="$(cd "${script_dir}/.." && pwd)"
+  manifest_path="${repo_root}/manifest/albion-manifest.yaml"
+  output_path="${repo_root}/charter/ALBION.md"
+  check_mode=0
+
+  parse_args "$@"
+  run_compiler
+}
+
+main "$@"

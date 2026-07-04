@@ -1,7 +1,7 @@
 <!-- albion:charter v0.1-draft
      Compile target: claude-code (loaded as system context by `bin/albion`).
      Section markers (albion:section) exist for the manifest→compile pipeline (M3).
-     Until the pipeline lands, this file is hand-maintained and is the source of truth. -->
+     This file is compiled from manifest/; edit fragments there and run `bin/albion-compile` to regenerate it. -->
 
 # ALBION.md — Operating System
 

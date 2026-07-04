@@ -1,0 +1,63 @@
+# Albion manifest. Strict line-based YAML subset; parseable with python3 stdlib only.
+# Supported syntax: comments/blank lines, top-level key: value scalars, and
+# top-level lists whose items are one-level maps written as "- key: value"
+# followed by indented "key: value" lines. No anchors, quoted scalars, flow
+# collections, nested lists, multiline scalars, or implicit typing. Values are
+# plain strings; relative paths resolve from the repository root.
+schema: albion-manifest/v1
+charter:
+  - id: preamble
+    target: claude-code
+    file: manifest/sections/00-preamble.md
+  - id: contract
+    target: claude-code
+    file: manifest/sections/01-contract.md
+  - id: intent-gate
+    target: claude-code
+    file: manifest/sections/02-intent-gate.md
+  - id: operating-loop
+    target: claude-code
+    file: manifest/sections/03-operating-loop.md
+  - id: workbench
+    target: claude-code
+    file: manifest/sections/04-workbench.md
+  - id: delegation
+    target: claude-code
+    file: manifest/sections/05-delegation.md
+  - id: skills
+    target: claude-code
+    file: manifest/sections/06-skills.md
+  - id: enforcement
+    target: claude-code
+    file: manifest/sections/07-enforcement.md
+  - id: communication
+    target: claude-code
+    file: manifest/sections/08-communication.md
+  - id: recovery
+    target: claude-code
+    file: manifest/sections/09-recovery.md
+  - id: re-anchor
+    target: claude-code
+    file: manifest/sections/10-re-anchor.md
+skills:
+  - id: completion-gate
+    path: plugin/skills/completion-gate/SKILL.md
+  - id: delegation
+    path: plugin/skills/delegation/SKILL.md
+  - id: fable-mode-glm-5-2
+    path: plugin/skills/fable-mode-glm-5-2/SKILL.md
+  - id: maturity-assessment
+    path: plugin/skills/maturity-assessment/SKILL.md
+  - id: recovery
+    path: plugin/skills/recovery/SKILL.md
+agents:
+  - id: counterexample-hunter
+    path: plugin/agents/counterexample-hunter.md
+  - id: quick
+    path: plugin/agents/quick.md
+  - id: scout
+    path: plugin/agents/scout.md
+  - id: simplifier
+    path: plugin/agents/simplifier.md
+  - id: verifier
+    path: plugin/agents/verifier.md
