@@ -12,6 +12,9 @@ node_modules/
 .agent-workbench/
 .agent-relay/
 
+# Conductor runtime handoff area (briefs are committed under docs/build/packets/)
+.albion/
+
 # Raw research reports — retained locally, excluded from the public repo
 # (they contain machine-specific details: local paths, personal shell setup)
 docs/research/reports/
