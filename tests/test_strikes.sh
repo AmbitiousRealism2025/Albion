@@ -74,6 +74,18 @@ state_get() {
   ALBION_STATE_DIR="$state_dir" "${ROOT_DIR}/state/albion-state" get --file "${state_dir}/${session_id}.json" --key "$key" --default "$default_value"
 }
 
+state_set() {
+  local state_dir
+  local session_id
+  local key
+  local value
+  state_dir="$1"
+  session_id="$2"
+  key="$3"
+  value="$4"
+  ALBION_STATE_DIR="$state_dir" "${ROOT_DIR}/state/albion-state" set --file "${state_dir}/${session_id}.json" --key "$key" --value "$value"
+}
+
 hook_context() {
   python3 -c '
 import json
@@ -128,6 +140,34 @@ print(json.dumps({
     "tool_response": {"success": True},
 }, separators=(",", ":")))
 ' "$session_id" "$tool_name" "$file_path"
+}
+
+bash_payload() {
+  local session_id
+  local command
+  local exit_code
+  local stderr
+  session_id="$1"
+  command="$2"
+  exit_code="$3"
+  stderr="$4"
+  python3 -c '
+import json
+import sys
+
+print(json.dumps({
+    "session_id": sys.argv[1],
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Bash",
+    "tool_input": {"command": sys.argv[2]},
+    "tool_response": {
+        "stdout": "ok\n" if sys.argv[3] == "0" else "",
+        "stderr": sys.argv[4],
+        "exit_code": int(sys.argv[3]),
+        "interrupted": False,
+    },
+}, separators=(",", ":")))
+' "$session_id" "$command" "$exit_code" "$stderr"
 }
 
 assert_no_state_files() {
@@ -234,6 +274,87 @@ test_bash_failure_detection_is_conservative() {
   assert_eq "missing" "$(state_get "$state_dir" "$session_id" "strikes.Bash__make" missing)" "ambiguous bash stderr is treated as success and resets"
 }
 
+test_passing_tests_run_records_last_test_pass() {
+  local state_dir
+  local session_id
+  local payload
+  session_id="strike-session-last-test-pass"
+  state_dir="${TMP_DIR}/last-test-pass.state"
+  payload="$(bash_payload "$session_id" "bash tests/run.sh" 0 "")"
+
+  run_hook_in_state "last-test-pass" "$payload" "$state_dir"
+  assert_exit_code 0 "$RUN_CODE" "passing test payload exits zero"
+  assert_eq "" "$RUN_STDOUT" "passing test payload emits no injection"
+  assert_eq "pass" "$(state_get "$state_dir" "$session_id" last_test.status missing)" "passing test records pass"
+  assert_eq "bash tests/run.sh" "$(state_get "$state_dir" "$session_id" last_test.command missing)" "passing test records command"
+}
+
+test_failing_run_tests_py_records_last_test_fail() {
+  local state_dir
+  local session_id
+  local payload
+  session_id="strike-session-last-test-fail"
+  state_dir="${TMP_DIR}/last-test-fail.state"
+  payload="$(bash_payload "$session_id" "python3 tests/run_tests.py" 1 "failed\n")"
+
+  run_hook_in_state "last-test-fail" "$payload" "$state_dir"
+  assert_exit_code 0 "$RUN_CODE" "failing test payload exits zero"
+  assert_eq "fail" "$(state_get "$state_dir" "$session_id" last_test.status missing)" "failing test records fail"
+  assert_eq "python3 tests/run_tests.py" "$(state_get "$state_dir" "$session_id" last_test.command missing)" "failing test records command"
+  assert_eq "1" "$(state_get "$state_dir" "$session_id" strikes.Bash__python3 missing)" "failing test still records strike"
+}
+
+test_failing_non_test_command_leaves_last_test_untouched() {
+  local state_dir
+  local session_id
+  local payload
+  session_id="strike-session-last-test-untouched"
+  state_dir="${TMP_DIR}/last-test-untouched.state"
+  state_set "$state_dir" "$session_id" last_test '{"command":"bash tests/run.sh","status":"pass","at":"2026-07-04T12:00:00Z"}'
+  payload="$(bash_payload "$session_id" "ls /nope" 2 "ls: /nope: No such file or directory\n")"
+
+  run_hook_in_state "last-test-untouched" "$payload" "$state_dir"
+  assert_exit_code 0 "$RUN_CODE" "failing non-test exits zero"
+  assert_eq "1" "$(state_get "$state_dir" "$session_id" strikes.Bash__ls missing)" "failing non-test still records strike"
+  assert_eq "pass" "$(state_get "$state_dir" "$session_id" last_test.status missing)" "failing non-test does not change status"
+  assert_eq "bash tests/run.sh" "$(state_get "$state_dir" "$session_id" last_test.command missing)" "failing non-test does not change command"
+}
+
+test_last_test_overwrites_prior_failure_with_pass() {
+  local state_dir
+  local session_id
+  local fail_payload
+  local pass_payload
+  session_id="strike-session-last-test-overwrite"
+  state_dir="${TMP_DIR}/last-test-overwrite.state"
+  fail_payload="$(bash_payload "$session_id" "python3 tests/run_tests.py" 1 "failed\n")"
+  pass_payload="$(bash_payload "$session_id" "bash tests/run.sh" 0 "")"
+
+  run_hook_in_state "last-test-overwrite-fail" "$fail_payload" "$state_dir"
+  assert_eq "fail" "$(state_get "$state_dir" "$session_id" last_test.status missing)" "precondition records fail"
+
+  run_hook_in_state "last-test-overwrite-pass" "$pass_payload" "$state_dir"
+  assert_eq "pass" "$(state_get "$state_dir" "$session_id" last_test.status missing)" "later passing test overwrites status"
+  assert_eq "bash tests/run.sh" "$(state_get "$state_dir" "$session_id" last_test.command missing)" "later passing test overwrites command"
+}
+
+test_last_test_command_is_truncated_to_200_chars() {
+  local state_dir
+  local session_id
+  local long_command
+  local expected_command
+  local payload
+  session_id="strike-session-last-test-truncated"
+  state_dir="${TMP_DIR}/last-test-truncated.state"
+  long_command="pytest $(printf 'a%.0s' {1..250})"
+  expected_command="${long_command:0:200}"
+  payload="$(bash_payload "$session_id" "$long_command" 0 "")"
+
+  run_hook_in_state "last-test-truncated" "$payload" "$state_dir"
+  assert_eq "200" "$(json_string_length "$(state_get "$state_dir" "$session_id" last_test.command missing)")" "stored test command is capped at 200 chars"
+  assert_eq "$expected_command" "$(state_get "$state_dir" "$session_id" last_test.command missing)" "stored test command is the first 200 chars"
+}
+
 test_captured_success_payloads_are_silent_and_do_not_pollute_state() {
   local state_dir
   local line
@@ -277,6 +398,11 @@ test_consecutive_failures_inject_at_second_and_third_strike
 test_success_resets_existing_counter
 test_distinct_operations_keep_independent_counters
 test_bash_failure_detection_is_conservative
+test_passing_tests_run_records_last_test_pass
+test_failing_run_tests_py_records_last_test_fail
+test_failing_non_test_command_leaves_last_test_untouched
+test_last_test_overwrites_prior_failure_with_pass
+test_last_test_command_is_truncated_to_200_chars
 test_captured_success_payloads_are_silent_and_do_not_pollute_state
 test_synthetic_success_fixture_is_silent
 test_malformed_stdin_exits_zero_and_logs_one_line

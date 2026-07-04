@@ -31,6 +31,7 @@ import json
 import re
 import shlex
 import sys
+from datetime import datetime, timezone
 
 
 def walk(value):
@@ -75,6 +76,93 @@ def first_command_token(command):
     return parts[0] if parts else ""
 
 
+def strip_leading_env_assignments(command):
+    remainder = command.strip()
+    quote = chr(39)
+    assignment_pattern = (
+        r"^[A-Za-z_][A-Za-z0-9_]*=(?:"
+        + quote
+        + "[^"
+        + quote
+        + "]*"
+        + quote
+        + r"|\"[^\"]*\"|[^ \t;&|]+)[ \t]+"
+    )
+    while True:
+        match = re.match(assignment_pattern, remainder)
+        if match is None:
+            return remainder
+        remainder = remainder[match.end():].lstrip()
+
+
+def strip_test_prefixes(command):
+    if not isinstance(command, str):
+        return ""
+    remainder = command.strip()
+    while True:
+        original = remainder
+        remainder = strip_leading_env_assignments(remainder)
+        match = re.match(r"^cd[ \t]+[^;&|]+&&[ \t]*", remainder)
+        if match is not None:
+            remainder = remainder[match.end():].lstrip()
+            continue
+        if remainder == original:
+            return remainder
+
+
+def command_tokens(command):
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return command.split()
+
+
+def path_segment_matches(path, pattern):
+    return any(re.fullmatch(pattern, segment) for segment in path.split("/"))
+
+
+def is_test_command(command):
+    stripped = strip_test_prefixes(command)
+    tokens = command_tokens(stripped)
+    if not tokens:
+        return False
+
+    first = tokens[0]
+    second = tokens[1] if len(tokens) > 1 else ""
+
+    if first == "tests/run.sh":
+        return True
+    if first == "bash" and second == "tests/run.sh":
+        return True
+
+    if first in {"bash", "sh", "python3"} and second:
+        return path_segment_matches(second, r"run_tests?\.py") or path_segment_matches(
+            second, r"test_[^ /]+\.(sh|py)"
+        )
+
+    if first == "pytest":
+        return True
+    if first in {"npm", "yarn", "pnpm", "go", "cargo"} and second == "test":
+        return True
+    if first == "make" and second in {"test", "check"}:
+        return True
+    return False
+
+
+def last_test_value(command, failed):
+    return json.dumps(
+        {
+            "status": "fail" if failed else "pass",
+            "command": command[:200],
+            "at": datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z"),
+        },
+        separators=(",", ":"),
+    )
+
+
 def normalize(operation):
     normalized = operation.replace(":", "__")
     normalized = re.sub(r"[^A-Za-z0-9_]+", "_", normalized)
@@ -116,11 +204,14 @@ elif tool_name == "Bash":
 
 operation = f"{tool_name}:{target}" if target else tool_name
 failed = explicit_failure(tool_response) or (tool_name == "Bash" and bash_failure(tool_response))
+command = tool_input.get("command") if tool_name == "Bash" else None
+test_value = last_test_value(command, failed) if is_test_command(command) else ""
 
 print(session_id)
 print(f"strikes.{normalize(operation)}")
 print(operation)
 print("fail" if failed else "success")
+print(test_value)
 '
 }
 
@@ -177,6 +268,7 @@ run_hook() {
   local state_key
   local operation
   local status
+  local last_test
   local count
   local existing_count
 
@@ -207,6 +299,13 @@ run_hook() {
   state_key="$(printf '%s\n' "$parsed" | sed -n '2p')"
   operation="$(printf '%s\n' "$parsed" | sed -n '3p')"
   status="$(printf '%s\n' "$parsed" | sed -n '4p')"
+  last_test="$(printf '%s\n' "$parsed" | sed -n '5p')"
+
+  if [ "$last_test" != "" ]; then
+    if ! albion_state_set "$session_id" last_test "$last_test" >/dev/null 2>&1; then
+      log_line "post-tool-strikes: failed to set last_test for ${session_id}"
+    fi
+  fi
 
   if [ "$status" = "success" ]; then
     if ! existing_count="$(albion_state_get "$session_id" "$state_key" __albion_missing__ 2>/dev/null)"; then

@@ -26,7 +26,11 @@ State files are written by `state/albion-state` with mode `0600`. Writes are ser
 
 `last_test`
 
-: Object describing the most recent test command observed by hook logic.
+: Object describing the most recent test command observed by hook logic. The
+  writer is `plugin/scripts/post-tool-strikes.sh` during the existing
+  `PostToolUse` pass. It only records Bash tool payloads classified as test
+  runs by the hook's conservative command patterns, and overwrites the object on
+  every detected test run.
 
 ```json
 {
@@ -35,6 +39,18 @@ State files are written by `state/albion-state` with mode `0600`. Writes are ser
   "at": "2026-07-04T12:00:00Z"
 }
 ```
+
+`status` is `pass` or `fail`, derived from the same payload success/failure
+extraction used for strike accounting. `command` is the original Bash command
+truncated to 200 characters. `at` is a UTC ISO-8601 timestamp ending in `Z`.
+
+Detection strips leading environment assignments and leading `cd ... &&`
+prefixes, then matches only these test command forms: `tests/run.sh`,
+`bash tests/run.sh`, `bash`/`sh`/`python3` running a path segment named
+`run_test.py`, `run_tests.py`, or `test_<name>.sh`/`test_<name>.py`, and the
+package or language test commands `pytest`, `npm test`, `yarn test`,
+`pnpm test`, `go test`, `cargo test`, `make test`, or `make check`. Non-Bash
+tools and non-test Bash commands do not write `last_test`.
 
 `notes`
 
