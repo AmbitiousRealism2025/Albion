@@ -5,6 +5,10 @@ warn_without_charter() {
   printf '%s\n' 'WARNING: running without the orchestration charter' >&2
 }
 
+warn_without_plugin() {
+  printf '%s\n' 'WARNING: running without the Albion plugin directory' >&2
+}
+
 resolve_script_dir() {
   local source_path
   local source_dir
@@ -147,11 +151,32 @@ resolve_charter() {
   fi
 }
 
+resolve_plugin_dir() {
+  local candidate
+
+  if [ "$mode" = "vanilla" ]; then
+    plugin_dir=""
+    return 0
+  fi
+
+  candidate="${repo_root}/plugin"
+  if [ -d "$candidate" ]; then
+    plugin_dir="$(cd -P "$candidate" && pwd)"
+  else
+    plugin_dir=""
+    warn_without_plugin
+  fi
+}
+
 build_final_argv() {
   final_argv=("claude")
 
   if [ -n "$charter_path" ]; then
     final_argv+=("--append-system-prompt" "$(cat "$charter_path")")
+  fi
+
+  if [ -n "$plugin_dir" ]; then
+    final_argv+=("--plugin-dir" "$plugin_dir")
   fi
 
   if [ "$model_injected" -eq 1 ]; then
@@ -172,6 +197,7 @@ main() {
   local doctor_requested
   local dry_run
   local charter_path
+  local plugin_dir
   local resolved_model
   local model_injected
   local -a passthrough
@@ -185,6 +211,7 @@ main() {
   doctor_requested=0
   dry_run=0
   charter_path=""
+  plugin_dir=""
   resolved_model=""
   model_injected=0
   passthrough=()
@@ -211,6 +238,7 @@ main() {
 
   resolve_model
   resolve_charter
+  resolve_plugin_dir
   build_final_argv
 
   if [ "$dry_run" -eq 1 ]; then

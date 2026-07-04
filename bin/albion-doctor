@@ -265,6 +265,156 @@ check_hook_suite() {
   record_check "FAIL" "hook-suite" "$(one_line "$output")"
 }
 
+check_manifest() {
+  local compiler
+  local output
+  local plugin_manifest
+  local validation
+  local version_manifest
+
+  compiler="${repo_root}/bin/albion-compile"
+  version_manifest="${repo_root}/manifest/albion-manifest.yaml"
+  plugin_manifest="${repo_root}/plugin/.claude-plugin/plugin.json"
+
+  if [ ! -f "$compiler" ]; then
+    record_check "SKIP" "manifest" "compiler missing at ${compiler}"
+    return 0
+  fi
+
+  if ! output="$("$compiler" --check 2>&1)"; then
+    record_check "FAIL" "manifest" "$(one_line "$output")"
+    return 0
+  fi
+
+  if validation="$(python3 - "$repo_root" "$version_manifest" "$plugin_manifest" 2>&1 <<'PY'
+from __future__ import annotations
+
+import json
+import pathlib
+import sys
+
+
+class ManifestError(Exception):
+    pass
+
+
+def parse_key_value(text: str, line_number: int) -> tuple[str, str]:
+    if ":" not in text:
+        raise ManifestError(f"line {line_number}: expected key: value")
+    key, value = text.split(":", 1)
+    key = key.strip()
+    value = value.strip()
+    if not key:
+        raise ManifestError(f"line {line_number}: empty key")
+    if not value:
+        raise ManifestError(f"line {line_number}: empty value for {key}")
+    return key, value
+
+
+def parse_manifest(path: pathlib.Path) -> dict[str, object]:
+    scalars: dict[str, str] = {}
+    lists: dict[str, list[dict[str, str]]] = {}
+    current_list: str | None = None
+    current_item: dict[str, str] | None = None
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError as exc:
+        raise ManifestError(f"manifest missing: {path}") from exc
+
+    for line_number, raw_line in enumerate(lines, start=1):
+        if "\t" in raw_line:
+            raise ManifestError(f"line {line_number}: tabs are not supported")
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not raw_line.startswith(" "):
+            key, separator, value = raw_line.partition(":")
+            key = key.strip()
+            value = value.strip()
+            if not separator or not key:
+                raise ManifestError(f"line {line_number}: expected top-level key")
+            current_item = None
+            if value:
+                scalars[key] = value
+                current_list = None
+            else:
+                current_list = key
+                lists.setdefault(key, [])
+            continue
+        if raw_line.startswith("  - "):
+            if current_list is None:
+                raise ManifestError(f"line {line_number}: list item outside a list")
+            key, value = parse_key_value(raw_line[4:], line_number)
+            current_item = {key: value}
+            lists[current_list].append(current_item)
+            continue
+        if raw_line.startswith("    "):
+            if current_item is None:
+                raise ManifestError(f"line {line_number}: map entry outside a list item")
+            key, value = parse_key_value(raw_line[4:], line_number)
+            if key in current_item:
+                raise ManifestError(f"line {line_number}: duplicate key {key}")
+            current_item[key] = value
+            continue
+        raise ManifestError(f"line {line_number}: unsupported indentation")
+
+    return {**scalars, **lists}
+
+
+def check_assets(root: pathlib.Path, manifest: dict[str, object], list_name: str) -> int:
+    entries = manifest.get(list_name)
+    if not isinstance(entries, list):
+        raise ManifestError(f"{list_name} list missing")
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict) or "path" not in entry:
+            raise ManifestError(f"{list_name} entry {index}: missing path")
+        path_value = entry["path"]
+        if not isinstance(path_value, str) or not path_value:
+            raise ManifestError(f"{list_name} entry {index}: empty path")
+        asset_path = pathlib.Path(path_value)
+        if not asset_path.is_absolute():
+            asset_path = root / asset_path
+        if not asset_path.is_file():
+            raise ManifestError(f"missing {list_name} asset: {path_value}")
+    return len(entries)
+
+
+def check_plugin_json(path: pathlib.Path) -> None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ManifestError(f"plugin.json missing: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ManifestError(f"plugin.json invalid JSON: {exc.msg}") from exc
+    if not isinstance(payload, dict):
+        raise ManifestError("plugin.json must contain a JSON object")
+    name = payload.get("name")
+    if not isinstance(name, str) or not name.strip():
+        raise ManifestError("plugin.json name is empty")
+
+
+try:
+    root = pathlib.Path(sys.argv[1])
+    manifest = parse_manifest(pathlib.Path(sys.argv[2]))
+    skills_count = check_assets(root, manifest, "skills")
+    agents_count = check_assets(root, manifest, "agents")
+    check_plugin_json(pathlib.Path(sys.argv[3]))
+except ManifestError as exc:
+    print(str(exc), file=sys.stderr)
+    raise SystemExit(1)
+
+print(f"{skills_count} skills, {agents_count} agents, plugin.json ok")
+PY
+)"; then
+    record_check "PASS" "manifest" "charter in sync; ${validation}"
+    pass_count=$((pass_count - 1))
+    return 0
+  fi
+
+  record_check "FAIL" "manifest" "$(one_line "$validation")"
+}
+
 strip_model_suffix() {
   local model
   model="$1"
@@ -439,6 +589,7 @@ run_checks() {
     check_tmux
     check_fixtures
     check_hook_suite
+    check_manifest
   )
 
   if [ "$live_mode" -eq 1 ]; then
