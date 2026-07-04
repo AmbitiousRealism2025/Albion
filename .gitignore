@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Agent working files
+.agent-workbench/
+.agent-relay/
+
+# Raw research reports — retained locally, excluded from the public repo
+# (they contain machine-specific details: local paths, personal shell setup)
+docs/research/reports/
+
+# Logs
+*.log

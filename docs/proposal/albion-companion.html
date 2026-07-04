@@ -1,0 +1,341 @@
+<title>Albion — Proposal Companion</title>
+<style>
+  :root{
+    --chalk:#F5F7F6; --panel:#FDFEFD; --ink:#17242B; --muted:#51636B;
+    --line:#D9E1DE; --accent:#0F7A6A; --accent-soft:#E3F0ED;
+    --keep:#1F7A4D; --keep-bg:#E6F2EB;
+    --mod:#A9720E;  --mod-bg:#F7EFDD;
+    --rep:#3E63A8;  --rep-bg:#E7EDF7;
+    --drop:#B0402F; --drop-bg:#F6E7E3;
+    --pass:#1F7A4D; --fail:#B0402F; --warn:#A9720E;
+    --serif: "Baskerville","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans: "Avenir Next","Avenir","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono: "SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--chalk);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:16px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 28px 96px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ── Hero: cliff strata ─────────────────────────── */
+  header{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+  .strata{display:flex;flex-direction:column;gap:5px;margin-bottom:36px;max-width:340px}
+  .strata span{height:7px;border-radius:2px}
+  .strata span:nth-child(1){background:var(--ink);width:100%}
+  .strata span:nth-child(2){background:var(--accent);width:78%}
+  .strata span:nth-child(3){background:var(--mod);width:56%}
+  .strata span:nth-child(4){background:var(--line);width:38%}
+  .eyebrow{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(40px,6.5vw,66px);line-height:1.04;margin:0 0 18px;letter-spacing:-.01em;text-wrap:balance}
+  h1 em{font-style:italic;color:var(--accent)}
+  .lede{font-size:19px;color:var(--muted);max-width:62ch;margin:0 0 22px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px 26px;font-size:13.5px;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+
+  /* ── Sections ───────────────────────────────────── */
+  section{padding:52px 0 8px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:26px}
+  .sec-num{font-family:var(--mono);font-size:13px;color:var(--accent);font-variant-numeric:tabular-nums}
+  h2{font-family:var(--serif);font-weight:400;font-size:30px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+  h3{font-family:var(--sans);font-size:15px;font-weight:600;margin:0 0 8px}
+  p{max-width:70ch}
+  .note{font-size:14px;color:var(--muted);max-width:75ch}
+
+  /* ── Stat band ──────────────────────────────────── */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
+  .stat{background:var(--panel);padding:18px 18px 16px}
+  .stat .v{font-family:var(--serif);font-size:32px;line-height:1.05;font-variant-numeric:tabular-nums}
+  .stat .v small{font-size:17px;color:var(--muted)}
+  .stat .k{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+  .stat.hot .v{color:var(--drop)}
+  .stat.good .v{color:var(--accent)}
+
+  /* ── Cards / callouts ───────────────────────────── */
+  .callout{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:16px 20px;margin:22px 0;max-width:78ch}
+  .callout p{margin:0;font-size:15.5px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 20px}
+  .card h3{display:flex;align-items:center;gap:8px}
+  .card p{font-size:14.5px;color:var(--muted);margin:6px 0 0}
+  .card .tag{font-family:var(--mono);font-size:11px;background:var(--chalk);border:1px solid var(--line);border-radius:4px;padding:2px 7px;color:var(--muted)}
+
+  /* ── Layer diagram ──────────────────────────────── */
+  .layers{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .layer{display:grid;grid-template-columns:190px 1fr 1fr;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .layer .name{padding:16px 18px;color:#fff;font-weight:600;font-size:14.5px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .layer .name small{font-weight:400;font-size:11.5px;opacity:.85}
+  .layer .owns,.layer .never{padding:14px 18px;font-size:13.5px}
+  .layer .owns b,.layer .never b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-weight:600}
+  .layer .never{border-left:1px dashed var(--line);color:var(--muted)}
+  .l1 .name{background:var(--ink)} .l2 .name{background:var(--accent)} .l3 .name{background:#7A5A17} .l4 .name{background:#4A5C66}
+  @media(max-width:760px){.layer{grid-template-columns:1fr}.layer .never{border-left:none;border-top:1px dashed var(--line)}}
+
+  /* ── Tables ─────────────────────────────────────── */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:640px}
+  th{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-align:left;font-weight:600;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--chalk)}
+  td{padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.num,th.num{font-variant-numeric:tabular-nums}
+  .mono{font-family:var(--mono);font-size:12.5px}
+  .win{font-weight:600}
+
+  /* ── Verdict chips ──────────────────────────────── */
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 18px;font-size:13px}
+  .pill{display:inline-flex;align-items:center;gap:7px;border-radius:99px;padding:4px 12px;font-weight:600;font-size:12.5px}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .pk{background:var(--keep-bg);color:var(--keep)} .pk .dot{background:var(--keep)}
+  .pm{background:var(--mod-bg);color:var(--mod)} .pm .dot{background:var(--mod)}
+  .pr{background:var(--rep-bg);color:var(--rep)} .pr .dot{background:var(--rep)}
+  .pd{background:var(--drop-bg);color:var(--drop)} .pd .dot{background:var(--drop)}
+  .vgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .vgroup{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .vgroup .vh{padding:12px 16px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+  .vgroup ul{list-style:none;margin:0;padding:6px 0 10px}
+  .vgroup li{padding:7px 16px;font-size:13.5px;border-top:1px solid var(--chalk);line-height:1.4}
+  .vgroup li small{display:block;color:var(--muted);font-size:12px}
+  .vk .vh{background:var(--keep-bg);color:var(--keep)}
+  .vm .vh{background:var(--mod-bg);color:var(--mod)}
+  .vr .vh{background:var(--rep-bg);color:var(--rep)}
+  .vd .vh{background:var(--drop-bg);color:var(--drop)}
+  .count{font-family:var(--mono);font-size:12px;opacity:.8}
+
+  /* ── Probe results ──────────────────────────────── */
+  .probe td:first-child{width:46%}
+  .res{font-weight:600;white-space:nowrap}
+  .res.p{color:var(--pass)} .res.f{color:var(--fail)} .res.w{color:var(--warn)}
+
+  /* ── Timeline ───────────────────────────────────── */
+  .timeline{list-style:none;margin:8px 0 0;padding:0;position:relative}
+  .timeline::before{content:"";position:absolute;left:11px;top:8px;bottom:8px;width:2px;background:var(--line)}
+  .timeline li{position:relative;padding:0 0 22px 44px}
+  .timeline .m{position:absolute;left:0;top:2px;width:24px;height:24px;border-radius:50%;background:var(--panel);border:2px solid var(--accent);color:var(--accent);font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .timeline li.done .m{background:var(--accent);color:#fff}
+  .timeline h3{margin:0 0 3px;font-size:15px}
+  .timeline p{margin:0;font-size:13.5px;color:var(--muted);max-width:72ch}
+  .timeline .done h3::after{content:"largely complete";font-family:var(--mono);font-size:10.5px;color:var(--accent);margin-left:10px;letter-spacing:.05em}
+
+  /* ── Tensions ───────────────────────────────────── */
+  ol.tensions{margin:8px 0 0;padding-left:0;counter-reset:t;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  ol.tensions li{counter-increment:t;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px 14px 16px;font-size:13.5px;color:var(--muted)}
+  ol.tensions li b{display:block;color:var(--ink);font-size:14px;margin-bottom:4px}
+  ol.tensions li b::before{content:counter(t,decimal-leading-zero);font-family:var(--mono);color:var(--accent);margin-right:9px;font-size:12px}
+
+  footer{margin-top:64px;border-top:1px solid var(--line);padding-top:22px;font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 28px}
+  @media (prefers-reduced-motion: no-preference){
+    header .strata span{transform-origin:left;animation:grow .9s ease both}
+    header .strata span:nth-child(2){animation-delay:.08s}
+    header .strata span:nth-child(3){animation-delay:.16s}
+    header .strata span:nth-child(4){animation-delay:.24s}
+    @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="strata" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <p class="eyebrow">Proposal Companion · v0.1 · 2026-07-04</p>
+  <h1>Albion<br><em>GLM-5.2 orchestration, built around fable-mode</em></h1>
+  <p class="lede">The successor to Atreides: Z.ai's GLM-5.2 as the main model in a custom Claude Code environment, the fable-mode-glm-5-2 skill as the behavioral core, and deterministic hooks where Atreides trusted the model. Grounded in an 11-agent research mission with live wire-level probes.</p>
+  <div class="meta">
+    <span><b>Full proposal</b> docs/proposal/albion-proposal.md</span>
+    <span><b>Research</b> docs/research/atreides-analysis.md</span>
+    <span><b>Agent reports</b> docs/research/reports/ (10 files)</span>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>Why Albion, in six numbers</h2></div>
+  <div class="stats">
+    <div class="stat good"><div class="v">62.1</div><div class="k">GLM-5.2 SWE-bench Pro — top open-weights (Opus 4.8: 69.2) at 3.6–5.7× lower price</div></div>
+    <div class="stat hot"><div class="v">13.0 <small>vs 26.0</small></div><div class="k">SWE-Marathon vs Opus 4.8 — half the score on ultra-long autonomy. The gap Albion exists to close</div></div>
+    <div class="stat hot"><div class="v">0<small>/3</small></div><div class="k">Abstract skill descriptions auto-triggering under GLM-5.2 (live probe) — the intent gate must invoke fable-mode by name</div></div>
+    <div class="stat good"><div class="v">100%</div><div class="k">Hooks, native subagents &amp; per-task effort routing verified working on the wire against api.z.ai</div></div>
+    <div class="stat"><div class="v">$1.20</div><div class="k">Cost of a medium fable-mode task (55 model calls) with warm cache — ≈3 prompt-equivalents on a Coding Plan</div></div>
+    <div class="stat"><div class="v">&lt;400</div><div class="k">Line budget for the always-on charter (Atreides shipped ~1,398 after cutting from ~4,000)</div></div>
+  </div>
+  <div class="callout"><p><b>The enforcement inversion.</b> Atreides was honor-system orchestration on a model that tolerated it — and its actual hook layer was silently inert (wrong input contract, wrong exit codes). GLM-5.2's drift and reward-hacking lineage flip the rule: everything enforceable moves into hooks; everything prompted gets compressed.</p></div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>The four-layer architecture</h2></div>
+  <p class="note">Every rule lives in exactly one layer. Duplication across layers is the documented Atreides failure mode (two contradictory delegation templates, conflicting intent tables).</p>
+  <div class="layers">
+    <div class="layer l1">
+      <div class="name">fable-mode v2<small>behavioral core (skill)</small></div>
+      <div class="owns"><b>Owns</b>Reasoning discipline: evidence-gated claims, state maps, competing hypotheses, counterexample-first recovery, verification, lessons</div>
+      <div class="never"><b>Never</b>Routing, enforcement, API configuration — frontmatter now carries <span class="mono">effort: xhigh</span> and scoped hooks</div>
+    </div>
+    <div class="layer l2">
+      <div class="name">Charter<small>ALBION.md · always-on</small></div>
+      <div class="owns"><b>Owns</b>Routing &amp; structure: intent gate → fable-on/off + effort tier, phase names, delegation pointer, task-tracking rule</div>
+      <div class="never"><b>Never</b>Restates fable-mode rules or native harness behavior; no model matrices, no hardcoded model IDs</div>
+    </div>
+    <div class="layer l3">
+      <div class="name">Hook suite<small>deterministic enforcement</small></div>
+      <div class="owns"><b>Owns</b>Strike counting, Stop completion gate, destructive-command guard, secrets scrubbing, state re-injection after compaction</div>
+      <div class="never"><b>Never</b>Semantic judgment — hooks check existence and state, the verifier agent checks meaning</div>
+    </div>
+    <div class="layer l4">
+      <div class="name">Launcher<small>albion · albion-env.sh</small></div>
+      <div class="owns"><b>Owns</b>Endpoint, model slots (<span class="mono">glm-5.2[1m]</span>), effort defaults, cache hygiene, timeouts, startup validation</div>
+      <div class="never"><b>Never</b>Sets <span class="mono">CLAUDE_CODE_EFFORT_LEVEL</span> — it would silently kill per-task effort routing</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>What the live probes proved</h2></div>
+  <p class="note">Milestone-zero verification was executed during research: Claude Code 2.1.197 against Z.ai's Anthropic-compatible endpoint, raw request captures included.</p>
+  <div class="tblwrap"><table class="probe">
+    <thead><tr><th>Capability under GLM-5.2</th><th>Result</th><th>Design consequence</th></tr></thead>
+    <tbody>
+      <tr><td>Skill auto-trigger — distinctive lexical description</td><td class="res p">PASS 3/3</td><td>Keyword-anchored descriptions may auto-trigger</td></tr>
+      <tr><td>Skill auto-trigger — abstract fable-style description</td><td class="res f">FAIL 0/3</td><td><b>Intent gate invokes fable-mode by name</b></td></tr>
+      <tr><td>Explicit invocation (<span class="mono">/name</span>, "use the X skill")</td><td class="res p">PASS 2/2</td><td>User override always works</td></tr>
+      <tr><td>Native subagents incl. proactive dispatch</td><td class="res p">PASS</td><td>Ship scout/hunter/verifier/simplifier as real agents; matchers match <span class="mono">Task|Agent</span></td></tr>
+      <tr><td>PreToolUse exit-2 block · Stop <span class="mono">decision:block</span> · SessionStart injection</td><td class="res p">PASS</td><td>The whole enforcement layer is load-bearing</td></tr>
+      <tr><td>Per-subagent <span class="mono">model:</span> / <span class="mono">effort:</span> frontmatter</td><td class="res p">PASS (wire-captured)</td><td>Three-tier effort routing at task boundaries</td></tr>
+      <tr><td>Chained multi-tool sequences (search→read→edit)</td><td class="res p">PASS</td><td>No response-handling quirks observed</td></tr>
+      <tr><td>Plan mode headless</td><td class="res w">PARTIAL</td><td>Read-only enforcement works; ExitPlanMode absent in -p</td></tr>
+      <tr><td>TodoWrite / Grep / Glob</td><td class="res f">ABSENT in 2.1.197</td><td>Charter mandates TaskCreate/TaskUpdate; GLM never self-initiates tracking</td></tr>
+      <tr><td>Model tiers on Z.ai (opus vs sonnet slots)</td><td class="res w">COSMETIC</td><td>glm-5.1/glm-5 silently served as glm-5.2 — only glm-5-turbo differs</td></tr>
+      <tr><td>PreCompact stdout as context</td><td class="res f">NOT A CHANNEL</td><td>Compaction survival = SessionStart hook, matcher <span class="mono">compact</span></td></tr>
+      <tr><td>Claude Code cost accounting under Z.ai</td><td class="res f">WRONG</td><td>Telemetry reads token counts only</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>Atreides component verdicts</h2></div>
+  <div class="legend">
+    <span class="pill pk"><span class="dot"></span>Keep 5</span>
+    <span class="pill pm"><span class="dot"></span>Modernize 8</span>
+    <span class="pill pr"><span class="dot"></span>Replace 6</span>
+    <span class="pill pd"><span class="dot"></span>Drop 2</span>
+  </div>
+  <div class="vgroups">
+    <div class="vgroup vk">
+      <div class="vh">Keep — the crown jewels <span class="count">5</span></div>
+      <ul>
+        <li>Maturity-assessment rubric <small>13-point score → 4 levels; no native equivalent</small></li>
+        <li>7-section delegation template <small>one canonical version, compiled from a manifest</small></li>
+        <li>Settings-merge &amp; safety utilities <small>best-tested code in the repo</small></li>
+        <li>GLM environment plumbing <small>claude-glm-env.sh → albion-env.sh</small></li>
+        <li>Progressive-disclosure architecture <small>pushed to a &lt;400-line charter</small></li>
+      </ul>
+    </div>
+    <div class="vgroup vm">
+      <div class="vh">Modernize — right idea, wrong substrate <span class="count">8</span></div>
+      <ul>
+        <li>Intent gate <small>gains fable-on/off + effort-tier outputs; trigger authority</small></li>
+        <li>3-strikes recovery <small>hook counts strikes; counterexample-first ordering</small></li>
+        <li>Completion gate <small>Stop hook mechanically blocks premature "done"</small></li>
+        <li>Forked-context exploration <small>native scout agent, word-capped contract</small></li>
+        <li>Permissions deny-list <small>modern syntax, all obfuscation variants kept</small></li>
+        <li>Session-state JSON engine <small>finally ships — hook-facing state</small></li>
+        <li>Installer / doctor lifecycle <small>synthetic-payload hook tests, version manifest</small></li>
+        <li>Dual-environment wrapper <small>sources the GLM env instead of unsetting it</small></li>
+      </ul>
+    </div>
+    <div class="vgroup vr">
+      <div class="vh">Replace — Anthropic-coupled or superseded <span class="count">6</span></div>
+      <ul>
+        <li>Muad'Dib persona + prefix theater <small>one identity line + CLAUDE_AGENT_NAME</small></li>
+        <li>5-phase state machine <small>fable-mode's loop becomes the one vocabulary</small></li>
+        <li>Sonnet/opus routing economics <small>route by mode + effort, not model</small></li>
+        <li>Flat skills w/ invented frontmatter <small>real SKILL.md dirs in a plugin</small></li>
+        <li>Hook scripts <small>rebuilt on JSON-stdin / exit-2; logic ported verbatim</small></li>
+        <li>3-tier context files + PreCompact hack <small>workbench + SessionStart(compact)</small></li>
+      </ul>
+    </div>
+    <div class="vgroup vd">
+      <div class="vh">Drop <span class="count">2</span></div>
+      <ul>
+        <li>Handlebars template engine <small>16 helpers to vary one field</small></li>
+        <li>External memory sprawl <small>mem0 / Cipher / Qdrant / Forge chain — undeclared, fragile</small></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2>The intent gate</h2></div>
+  <p class="note">Effort has exactly three effective positions through this endpoint (off / GLM-high / GLM-max). Routing happens at task boundaries via skill &amp; agent frontmatter — never mid-session flips, never thinking keywords (verified: they don't reach the wire).</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Intent</th><th>Route</th><th>Effort tier</th><th>fable-mode</th></tr></thead>
+    <tbody>
+      <tr><td><b>Trivial</b> — lookup, one-liner</td><td>Answer directly, or <span class="mono">quick</span> agent (haiku slot → glm-5-turbo)</td><td>thinking-off</td><td>OFF</td></tr>
+      <tr><td><b>Explicit</b> — clear spec, known solution</td><td>Direct execution</td><td>high</td><td>OFF unless multi-file</td></tr>
+      <tr><td><b>Exploratory</b> — find / understand</td><td>Parallel <span class="mono">scout</span> agents</td><td>high</td><td>OFF for scouts</td></tr>
+      <tr><td><b>Open-ended / long-horizon</b></td><td class="win">Invoke Skill(fable-mode-glm-5-2) by name; scaffold workbench</td><td class="win">max (via skill frontmatter)</td><td class="win">ON — mandatory</td></tr>
+      <tr><td><b>Ambiguous</b></td><td>One clarifying question, reclassify</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">06</span><h2>The hook enforcement suite</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Destructive-command guard <span class="tag">PreToolUse</span></h3><p><span class="mono">permissionDecision: deny</span> — blocks even in bypassPermissions. Atreides' normalization pipeline ported verbatim, finally wired in. Hard floor: modern-syntax permissions deny-list.</p></div>
+    <div class="card"><h3>Strike counter <span class="tag">PostToolUse</span></h3><p>Counts per-operation failures in session-state JSON; injects "Strike 2 of 3" as factual context. Strike 3 → counterexample-first recovery; git-revert demoted to escalation.</p></div>
+    <div class="card"><h3>Completion gate <span class="tag">Stop</span></h3><p>Blocks "done" while tasks are open, the last test failed, or verification.md is empty on fable tasks. Loop-guarded, capped at 4 blocks, reads last_assistant_message for evidence-free-claim heuristics. The conversion aimed at GLM's reward-hacking lineage.</p></div>
+    <div class="card"><h3>Secrets scrubber <span class="tag">PostToolUse · workbench writes</span></h3><p><span class="mono">updatedToolOutput</span> redaction on .agent-workbench/** — fable-mode's advisory note becomes mechanical.</p></div>
+    <div class="card"><h3>State re-injection <span class="tag">SessionStart · compact|resume|clear</span></h3><p>The verified compaction-survival channel. Re-injects task.md + state-map.md + strike/task state, each under the 10k-char cap.</p></div>
+    <div class="card"><h3>Anti-inert discipline <span class="tag">albion doctor</span></h3><p>Every hook integration-tested with recorded real payloads; doctor re-runs the suite on installed hooks. Atreides had 466 tests and zero against the wire format.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2>Agent roster &amp; cost model</h2></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Agent</th><th>Frontmatter</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">scout</td><td class="mono">effort: high · read-only</td><td>Parallel exploration; ≤500-word structured summaries; termination criteria built in</td></tr>
+      <tr><td class="mono">counterexample-hunter</td><td class="mono">effort: xhigh</td><td>Tries to break the current hypothesis; failing case or "no break found"</td></tr>
+      <tr><td class="mono">verifier</td><td class="mono">effort: xhigh</td><td>Fresh-context patch review vs task.md + tests; never sees the implementation transcript</td></tr>
+      <tr><td class="mono">simplifier</td><td class="mono">effort: high · read-only</td><td>Flags scope drift and unnecessary abstraction against task.md</td></tr>
+      <tr><td class="mono">quick</td><td class="mono">model: haiku → glm-5-turbo</td><td>Trivial tier — thinking auto-off, cheapest lane by price and quota</td></tr>
+    </tbody>
+  </table></div>
+  <div class="stats" style="margin-top:16px">
+    <div class="stat"><div class="v">~31k</div><div class="k">Always-on prefix tokens → $0.045 first pass, ~$0.008/turn cached ($0.26/M)</div></div>
+    <div class="stat"><div class="v">$1.40<small>/M</small></div><div class="k">GLM-5.2 input ($4.40/M out) vs Opus 4.8 $5/$25 — 3.6–5.7× cheaper</div></div>
+    <div class="stat good"><div class="v">Lite</div><div class="k">$18/mo covers ~9 (peak) to 25+ (off-peak) medium fable-mode tasks per 5-hour window</div></div>
+    <div class="stat"><div class="v">3×</div><div class="k">Quota multiplier at peak (14:00–18:00 UTC+8) — schedule heavy autonomous runs off-peak</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Roadmap</h2></div>
+  <ul class="timeline">
+    <li class="done"><span class="m">M0</span><h3>Verification matrix</h3><p>Filled by live research probes. Remaining: cache-keying on effort, subagent prompt-accounting, current Pro/Max pricing.</p></li>
+    <li><span class="m">M1</span><h3>Launcher + doctor</h3><p>albion / albion --vanilla / claude modes; startup validation fails loudly on wrong endpoint, silent model remap, or version &lt; 2.1.163; synthetic payloads through every hook.</p></li>
+    <li><span class="m">M2</span><h3>Hook suite + session-state engine</h3><p>Five hooks with recorded-payload tests. Exit: Stop gate blocks a fake "done"; strike counter injects at 2; scrubber redacts a planted secret.</p></li>
+    <li><span class="m">M3</span><h3>Charter + skills + agents, packaged as a plugin</h3><p>ALBION.md &lt;400 lines; fable-mode v2 with effort frontmatter + scoped hooks + namespaced workbench; 4 crown-jewel skills; 5 agents. Exit: gate invokes fable-mode by name end-to-end.</p></li>
+    <li><span class="m">M4</span><h3>Telemetry + bench (continuous from M2)</h3><p>ab-test-plan.md metrics become permanent per-task telemetry; three-arm A/B finally answers whether fable-mode measurably improves GLM-5.2's long-horizon discipline.</p></li>
+    <li><span class="m">M5</span><h3>Hardening</h3><p>Provider abstraction with data-sovereignty toggle; optional Claude-backed frontier review lane; lessons-promotion flow; bench green across ≥2 providers.</p></li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">09</span><h2>Tensions the design resolves — and how</h2></div>
+  <ol class="tensions">
+    <li><b>Trigger authority</b>Auto-triggering is unreliable → the always-on gate owns fable-on/off and invokes by name; explicit /fable-mode always works as user override.</li>
+    <li><b>Hooks vs prompts</b>Hooks check existence and state; the skill owns honesty; the verifier agent is the semantic layer. Every rule assigned to exactly one substrate.</li>
+    <li><b>Compliance vs coverage</b>GLM needs more structure but obeys long lists less. The &lt;400-line charter is a hypothesis — A/B compliance probes live in the bench.</li>
+    <li><b>Two state systems</b>Model writes prose (workbench); hooks write JSON (session-state); JSON wins on disagreement.</li>
+    <li><b>Recovery philosophy</b>Counterexample-first is primary; git-revert is the escalation after repeated counterexample-loop failure. The hook counts, the model reasons.</li>
+    <li><b>Bounded autonomy</b>SWE-Marathon says decompose: short verified segments, hook checkpoints, re-anchoring injections — 1M context is headroom, not a working set.</li>
+    <li><b>Unvalidated foundations</b>Build the harness, instrument the metrics, run the three-arm experiment continuously rather than gating the build on a lab study.</li>
+    <li><b>Data sovereignty</b>Provider toggle surfaced per-project; the regression bench runs per-provider because quantized hosts can silently degrade compliance behavior.</li>
+  </ol>
+</section>
+
+<footer>
+  <span>Albion proposal v0.1 — prepared 2026-07-04 by the Albion research mission (11 agents, 291 tool calls, live Z.ai probes).</span>
+  <span>Sources: github.com/AmbitiousRealism2025/Atreides · deepwiki.com/AmbitiousRealism2025/Atreides · ~/.claude/skills/fable-mode-glm-5-2 · docs.z.ai · code.claude.com/docs</span>
+</footer>
+</div>
