@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Shellcheck shell files
+        run: |
+          find bin env plugin/scripts tests -type f -print0 |
+            while IFS= read -r -d '' file; do
+              if [[ "$file" == *.sh ]]; then
+                printf '%s\0' "$file"
+                continue
+              fi
+
+              if IFS= read -r first_line < "$file" &&
+                [[ "$first_line" =~ ^#!.*(bash|[[:space:]/]sh)([[:space:]]|$) ]]; then
+                printf '%s\0' "$file"
+              fi
+            done |
+            xargs -0 -r shellcheck
+
+      - name: Run tests
+        run: bash tests/run.sh
