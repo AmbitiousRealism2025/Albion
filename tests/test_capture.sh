@@ -75,7 +75,7 @@ test_validator_passes_synthetic_fixtures() {
   set -e
 
   assert_exit_code 0 "$actual_code" "validator accepts synthetic fixtures"
-  assert_contains "$output" "PASS PreToolUse.jsonl: 1 line(s)" "validator reports PreToolUse synthetic fixture"
+  assert_contains "$output" "PASS PreToolUse.jsonl: 2 line(s)" "validator reports PreToolUse synthetic fixture"
   assert_contains "$output" "PASS SessionStart.jsonl: 1 line(s)" "validator reports SessionStart synthetic fixture"
 }
 

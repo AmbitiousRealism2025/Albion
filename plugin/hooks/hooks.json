@@ -11,6 +11,18 @@
             ]
           }
         ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": [
+              "${CLAUDE_PLUGIN_ROOT}/scripts/image-read-intercept.sh"
+            ],
+            "timeout": 130
+          }
+        ]
       }
     ],
     "PostToolUse": [

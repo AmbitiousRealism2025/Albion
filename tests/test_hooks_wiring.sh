@@ -94,6 +94,7 @@ hooks_path = plugin_root / "hooks" / "hooks.json"
 supported_events = {"PreToolUse", "PostToolUse", "Stop", "SessionStart"}
 expected = [
     ("PreToolUse", "Bash", "pre-tool-guard.sh"),
+    ("PreToolUse", "Read", "image-read-intercept.sh"),
     ("PostToolUse", "*", "post-tool-strikes.sh"),
     ("PostToolUse", "Write|Edit|NotebookEdit", "workbench-scrubber.sh"),
     ("Stop", None, "stop-gate.sh"),

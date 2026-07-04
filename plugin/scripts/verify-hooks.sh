@@ -147,6 +147,8 @@ run_hook() {
     ALBION_GATE_LOG="${TMP_DIR}/${hook_name}.gate.log" \
     ALBION_MANIFEST_PATH="${TMP_DIR}/${hook_name}.completion-manifest.json" \
     ALBION_INJECT_LOG="${TMP_DIR}/${hook_name}.inject.log" \
+    ALBION_IMAGE_LOG="${TMP_DIR}/${hook_name}.image.log" \
+    ALBION_VISION_BIN="${ALBION_VISION_BIN:-}" \
     "$script_path" >"$out_file" 2>"$err_file" <<<"$payload"
   RUN_CODE=$?
   set -e
@@ -169,6 +171,25 @@ print(json.dumps({
     "hook_event_name": "PreToolUse",
     "tool_name": "Bash",
     "tool_input": {"command": sys.argv[2]},
+}, separators=(",", ":")))
+PY
+}
+
+payload_for_read() {
+  local session_id
+  local file_path
+  session_id="$1"
+  file_path="$2"
+
+  python3 - "$session_id" "$file_path" <<'PY'
+import json
+import sys
+
+print(json.dumps({
+    "session_id": sys.argv[1],
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Read",
+    "tool_input": {"file_path": sys.argv[2]},
 }, separators=(",", ":")))
 PY
 }
@@ -276,6 +297,33 @@ verify_pre_tool_guard() {
   run_hook "$hook_name-allow" "$script_path" "$(payload_for_command guard-session 'printf safe')" "$state_dir" "$workbench_root"
   [ "$RUN_CODE" -eq 0 ] || fail_hook "$hook_name" "safe payload exited ${RUN_CODE}"
   assert_empty "$hook_name" "$RUN_STDOUT" "safe Bash payload should be silent"
+}
+
+verify_image_read_intercept() {
+  local hook_name
+  local script_path
+  local state_dir
+  local workbench_root
+  local missing_vision_bin
+  local decision
+  local reason
+  hook_name="image-read-intercept"
+  script_path="$(hook_script PreToolUse image-read-intercept.sh)" || fail_hook "$hook_name" "not configured"
+  state_dir="${TMP_DIR}/${hook_name}.state"
+  workbench_root="${TMP_DIR}/${hook_name}.workbench"
+  missing_vision_bin="${TMP_DIR}/${hook_name}.missing-vision"
+
+  ALBION_VISION_BIN="$missing_vision_bin" run_hook "$hook_name-deny" "$script_path" "$(payload_for_read image-session "${TMP_DIR}/example.png")" "$state_dir" "$workbench_root"
+  [ "$RUN_CODE" -eq 0 ] || fail_hook "$hook_name" "image payload exited ${RUN_CODE}"
+  decision="$(json_field "$RUN_STDOUT" "hookSpecificOutput.permissionDecision")" || fail_hook "$hook_name" "image output is not valid JSON"
+  [ "$decision" = "deny" ] || fail_hook "$hook_name" "image Read payload did not deny"
+  reason="$(json_field "$RUN_STDOUT" "hookSpecificOutput.permissionDecisionReason")" || fail_hook "$hook_name" "image deny reason missing"
+  assert_contains "$hook_name" "$reason" "no vision provider available for ${TMP_DIR}/example.png" "image deny should include degrade note"
+  assert_contains "$hook_name" "$reason" "Raw image bytes were not loaded." "image deny should note raw bytes were blocked"
+
+  ALBION_VISION_BIN="$missing_vision_bin" run_hook "$hook_name-noop" "$script_path" "$(payload_for_read image-session "${TMP_DIR}/notes.py")" "$state_dir" "$workbench_root"
+  [ "$RUN_CODE" -eq 0 ] || fail_hook "$hook_name" "non-image no-op exited ${RUN_CODE}"
+  assert_empty "$hook_name" "$RUN_STDOUT" "non-image Read payload should be silent"
 }
 
 verify_post_tool_strikes() {
@@ -387,11 +435,12 @@ verify_session_start_inject() {
 
 main() {
   verify_pre_tool_guard
+  verify_image_read_intercept
   verify_post_tool_strikes
   verify_workbench_scrubber
   verify_stop_gate
   verify_session_start_inject
-  printf 'PASS hook verification: 5 configured hook entries exercised\n'
+  printf 'PASS hook verification: 6 configured hook entries exercised\n'
 }
 
 main "$@"
