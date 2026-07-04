@@ -248,7 +248,21 @@ check_fixtures() {
 }
 
 check_hook_suite() {
-  record_check "SKIP" "hook-suite" "not installed (arrives in M2)"
+  local output
+  local verify_hooks
+
+  verify_hooks="${repo_root}/plugin/scripts/verify-hooks.sh"
+  if [ ! -x "$verify_hooks" ]; then
+    record_check "FAIL" "hook-suite" "verification runner missing or not executable at ${verify_hooks}"
+    return 0
+  fi
+
+  if output="$("$verify_hooks" 2>&1)"; then
+    record_check "PASS" "hook-suite" "$(one_line "$output")"
+    return 0
+  fi
+
+  record_check "FAIL" "hook-suite" "$(one_line "$output")"
 }
 
 strip_model_suffix() {
