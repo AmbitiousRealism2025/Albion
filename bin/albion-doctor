@@ -414,6 +414,75 @@ PY
   record_check "FAIL" "manifest" "$(one_line "$validation")"
 }
 
+write_vision_probe_image() {
+  local output_path
+
+  output_path="$1"
+
+  python3 - "$output_path" <<'PY'
+import base64
+import pathlib
+import sys
+
+png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+pathlib.Path(sys.argv[1]).write_bytes(base64.b64decode(png))
+PY
+}
+
+check_vision() {
+  local output
+  local probe_image
+  local vision_bin
+  local vision_model
+  local vision_prompt
+
+  vision_bin="${repo_root}/bin/albion-vision"
+  vision_model="${ALBION_VISION_MODEL:-glm-4.6v}"
+  vision_prompt="Describe this image factually and completely."
+
+  if [ ! -x "$vision_bin" ]; then
+    record_check "SKIP" "vision" "binary missing or not executable at ${vision_bin}"
+    return 0
+  fi
+
+  if [ "$doctor_env_loaded" -ne 1 ]; then
+    record_check "SKIP" "vision" "env did not load; no token resolves"
+    return 0
+  fi
+
+  if [ "$doctor_token_state" != "set" ]; then
+    record_check "FAIL" "vision" "lane=${doctor_auth_lane} model=${vision_model} token=***unset***"
+    return 0
+  fi
+
+  if [ "$live_mode" -ne 1 ]; then
+    record_check "PASS" "vision" "lane=${doctor_auth_lane} model=${vision_model} token=***set***"
+    return 0
+  fi
+
+  probe_image="${doctor_tmp_dir}/vision-probe.png"
+  write_vision_probe_image "$probe_image"
+
+  if output="$(
+    ALBION_VISION_CURL="${ALBION_DOCTOR_CURL:-curl}" \
+      "$vision_bin" \
+        --lane "$doctor_auth_lane" \
+        --model "$vision_model" \
+        --prompt "$vision_prompt" \
+        "$probe_image" \
+        2>&1
+  )"; then
+    if [ -n "$output" ]; then
+      record_check "PASS" "vision" "lane=${doctor_auth_lane} model=${vision_model} live description received"
+      return 0
+    fi
+    record_check "FAIL" "vision" "lane=${doctor_auth_lane} model=${vision_model} live probe returned an empty description"
+    return 0
+  fi
+
+  record_check "FAIL" "vision" "lane=${doctor_auth_lane} model=${vision_model}: $(one_line "$output")"
+}
+
 strip_model_suffix() {
   local model
   model="$1"
@@ -589,6 +658,7 @@ run_checks() {
     check_fixtures
     check_hook_suite
     check_manifest
+    check_vision
   )
 
   if [ "$live_mode" -eq 1 ]; then
