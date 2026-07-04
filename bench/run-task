@@ -1,0 +1,239 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+resolved_script_dir() {
+  local source_path
+  local dir_path
+  local link_target
+  source_path="${BASH_SOURCE[0]}"
+
+  while [ -L "$source_path" ]; do
+    dir_path="$(cd -P "$(dirname "$source_path")" && pwd)"
+    link_target="$(readlink "$source_path")"
+    case "$link_target" in
+      /*) source_path="$link_target" ;;
+      *) source_path="${dir_path}/${link_target}" ;;
+    esac
+  done
+
+  cd -P "$(dirname "$source_path")" && pwd
+}
+
+main() {
+  local script_dir
+  local repo_root
+  script_dir="$(resolved_script_dir)"
+  repo_root="$(cd "${script_dir}/.." && pwd)"
+
+  exec python3 - "$repo_root" "$@" <<'PY'
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import NoReturn
+
+
+@dataclass(frozen=True, slots=True)
+class Args:
+    repo_root: Path
+    task_dir: Path
+    arm: str
+    out_dir: Path
+
+
+def fail(message: str, code: int = 1) -> NoReturn:
+    print(f"run-task: {message}", file=sys.stderr)
+    raise SystemExit(code)
+
+
+def usage_error(message: str) -> NoReturn:
+    fail(f"{message}; usage: bench/run-task --task <dir> --arm albion|vanilla --out <dir>", 64)
+
+
+def read_option(argv: list[str], index: int, option: str) -> tuple[str, int]:
+    if index + 1 >= len(argv):
+        usage_error(f"{option} requires a value")
+    value = argv[index + 1]
+    if value == "":
+        usage_error(f"{option} requires a non-empty value")
+    return value, index + 2
+
+
+def parse_args(argv: list[str]) -> Args:
+    if not argv:
+        usage_error("--task, --arm, and --out are required")
+    repo_root = Path(argv[0])
+    raw: dict[str, str] = {}
+    index = 1
+    while index < len(argv):
+        arg = argv[index]
+        match arg:
+            case "--task" | "--arm" | "--out":
+                value, index = read_option(argv, index, arg)
+                raw[arg[2:]] = value
+            case "--help" | "-h":
+                usage_error("help requested")
+            case _:
+                usage_error(f"unknown argument {arg}")
+    for required in ("task", "arm", "out"):
+        if required not in raw:
+            usage_error(f"--{required} is required")
+    match raw["arm"]:
+        case "albion" | "vanilla":
+            arm = raw["arm"]
+        case _:
+            usage_error("--arm must be albion or vanilla")
+    return Args(repo_root=repo_root, task_dir=Path(raw["task"]).resolve(), arm=arm, out_dir=Path(raw["out"]).resolve())
+
+
+def read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as error:
+        fail(f"cannot read {path}: {error}")
+
+
+def read_json_object(path: Path) -> dict[str, object] | None:
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def ensure_task(task_dir: Path) -> None:
+    if not task_dir.is_dir():
+        fail(f"task directory does not exist: {task_dir}")
+    for filename in ("task.md", "setup.sh", "verify.sh", "allowed-tools"):
+        if not (task_dir / filename).is_file():
+            fail(f"task is missing {filename}: {task_dir}")
+
+
+def task_id(task_dir: Path) -> str:
+    return task_dir.name
+
+
+def allowed_tool_args(path: Path) -> list[str]:
+    args: list[str] = []
+    for raw_line in read_text(path).splitlines():
+        line = raw_line.strip()
+        if line == "" or line.startswith("#"):
+            continue
+        args.extend(["--allowedTools", line])
+    return args
+
+
+def run_checked(command: list[str], cwd: Path, stderr_path: Path) -> None:
+    with stderr_path.open("wb") as stderr_file:
+        result = subprocess.run(command, cwd=cwd, stdout=subprocess.DEVNULL, stderr=stderr_file, check=False)
+    if result.returncode != 0:
+        fail(f"{command[0]} exited {result.returncode}; stderr: {stderr_path}")
+
+
+def run_launcher(args: Args, workspace: Path, result_path: Path) -> None:
+    launcher = os.environ.get("ALBION_BENCH_LAUNCHER", str(args.repo_root / "bin" / "albion"))
+    command = [
+        launcher,
+        "-p",
+        read_text(args.task_dir / "task.md"),
+        "--permission-mode",
+        "acceptEdits",
+        "--output-format",
+        "json",
+    ]
+    command.extend(allowed_tool_args(args.task_dir / "allowed-tools"))
+    match args.arm:
+        case "albion":
+            pass
+        case "vanilla":
+            command.append("--vanilla")
+        case unreachable:
+            raise AssertionError(f"unreachable arm: {unreachable}")
+    with result_path.open("wb") as stdout_file, (args.out_dir / "launcher.stderr").open("wb") as stderr_file:
+        result = subprocess.run(command, cwd=workspace, stdout=stdout_file, stderr=stderr_file, check=False)
+    if result.returncode != 0:
+        fail(f"launcher exited {result.returncode}; stderr: {args.out_dir / 'launcher.stderr'}")
+
+
+def run_verify(task_dir: Path, workspace: Path, out_dir: Path) -> int:
+    with (out_dir / "verify.stdout").open("wb") as stdout_file, (out_dir / "verify.stderr").open("wb") as stderr_file:
+        result = subprocess.run([str(task_dir / "verify.sh")], cwd=workspace, stdout=stdout_file, stderr=stderr_file, check=False)
+    return result.returncode
+
+
+def workbench_present(workspace: Path) -> bool:
+    fable_root = workspace / ".agent-workbench" / "fable-mode"
+    try:
+        return fable_root.is_dir() and any(path.is_dir() and path.name != "lessons" for path in fable_root.iterdir())
+    except OSError:
+        return False
+
+
+def metrics_record(args: Args, workspace: Path, result_path: Path) -> dict[str, object]:
+    env = os.environ.copy()
+    env["ALBION_STATE_DIR"] = str(workspace / ".albion" / "state")
+    env["ALBION_WORKBENCH_ROOT"] = str(workspace / ".agent-workbench")
+    command = [str(args.repo_root / "telemetry" / "albion-metrics"), "--result", str(result_path), "--task-label", task_id(args.task_dir)]
+    result = subprocess.run(command, cwd=args.repo_root, env=env, text=True, capture_output=True, check=False)
+    if result.returncode != 0:
+        (args.out_dir / "metrics.stderr").write_text(result.stderr, encoding="utf-8")
+        fail(f"telemetry failed {result.returncode}; stderr: {args.out_dir / 'metrics.stderr'}")
+    try:
+        value = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        fail(f"telemetry emitted invalid JSON: {error.msg}")
+    if not isinstance(value, dict):
+        fail("telemetry emitted non-object JSON")
+    return value
+
+
+def write_run_record(args: Args, workspace: Path, started_at: str, started: float, verify_exit: int) -> None:
+    result_path = args.out_dir / "result.json"
+    record = {
+        "schema": "albion-bench-run/v1",
+        "task_id": task_id(args.task_dir),
+        "arm": args.arm,
+        "solved": verify_exit == 0,
+        "verify_exit": verify_exit,
+        "metrics": metrics_record(args, workspace, result_path),
+        "manifest": read_json_object(workspace / ".albion" / "completion-manifest.json"),
+        "workbench_present": workbench_present(workspace),
+        "started_at": started_at,
+        "wall_seconds": int(time.monotonic() - started),
+    }
+    (args.out_dir / "run-record.json").write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    args = parse_args(sys.argv[1:])
+    ensure_task(args.task_dir)
+    started = time.monotonic()
+    started_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    if args.out_dir.exists():
+        fail(f"--out already exists, refusing to overwrite: {args.out_dir}")
+    args.out_dir.mkdir()
+    workspace = args.out_dir / "workspace"
+    workspace.mkdir()
+    run_checked([str(args.task_dir / "setup.sh")], workspace, args.out_dir / "setup.stderr")
+    run_launcher(args, workspace, args.out_dir / "result.json")
+    verify_exit = run_verify(args.task_dir, workspace, args.out_dir)
+    write_run_record(args, workspace, started_at, started, verify_exit)
+    return 0
+
+
+raise SystemExit(main())
+PY
+}
+
+main "$@"

@@ -1,0 +1,380 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+python3 - "$@" <<'PY'
+from __future__ import annotations
+
+import argparse
+import json
+import statistics
+import sys
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+
+BENCH_SCHEMA = "albion-bench-run/v1"
+METRICS_SCHEMA = "albion-task-metrics/v1"
+LANE_COLUMNS = {
+    "api": ("cost_api_usd", "usd"),
+    "plan": ("cost_plan_prompt_equiv", "prompt_equivalents"),
+}
+
+
+@dataclass(frozen=True)
+class RunRecord:
+    path: Path
+    task_id: str
+    arm: str
+    solved: bool
+    lane: str
+    started_at: str
+    wall_seconds: float
+    turns: int | None
+    cost_value: float | None
+    pricing_incomplete: bool
+    gate_blocks: int | None
+    strikes: int | None
+    workbench_present: bool
+    manifest_last_test: str | None
+
+
+@dataclass(frozen=True)
+class SkippedRecord:
+    path: Path
+    reason: str
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="bench/report",
+        description="Aggregate Albion bench run records into a markdown A/B report.",
+    )
+    parser.add_argument("runs_dir", help="directory containing run-record.json files")
+    parser.add_argument("--out", help="write markdown report to this path instead of stdout")
+    return parser.parse_args(argv)
+
+
+def is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def as_int(value: Any) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
+
+
+def fail(message: str) -> int:
+    print(f"bench/report: {message}", file=sys.stderr)
+    return 2
+
+
+def relative_name(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def load_record(root: Path, path: Path) -> RunRecord | SkippedRecord:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            raw = json.load(handle)
+    except (OSError, json.JSONDecodeError) as error:
+        return SkippedRecord(path, f"schema mismatch ({error})")
+
+    if not isinstance(raw, dict) or raw.get("schema") != BENCH_SCHEMA:
+        return SkippedRecord(path, f"schema mismatch (expected {BENCH_SCHEMA})")
+
+    metrics = raw.get("metrics")
+    if not isinstance(metrics, dict) or metrics.get("schema") != METRICS_SCHEMA:
+        return SkippedRecord(path, f"schema mismatch (expected embedded {METRICS_SCHEMA})")
+
+    task_id = raw.get("task_id")
+    arm = raw.get("arm")
+    solved = raw.get("solved")
+    started_at = raw.get("started_at")
+    wall_seconds = raw.get("wall_seconds")
+    lane = metrics.get("lane")
+    if (
+        not isinstance(task_id, str)
+        or not isinstance(arm, str)
+        or not isinstance(solved, bool)
+        or not isinstance(started_at, str)
+        or not is_number(wall_seconds)
+        or not isinstance(lane, str)
+    ):
+        return SkippedRecord(path, "schema mismatch (required field type mismatch)")
+
+    cost = metrics.get("cost")
+    cost_value: float | None = None
+    pricing_incomplete = False
+    if isinstance(cost, dict):
+        pricing_incomplete = cost.get("pricing_incomplete") is True
+        if lane == "api" and is_number(cost.get("usd")):
+            cost_value = float(cost["usd"])
+        elif lane == "plan" and is_number(cost.get("prompt_equivalents")):
+            cost_value = float(cost["prompt_equivalents"])
+
+    manifest = raw.get("manifest")
+    manifest_last_test = manifest.get("last_test") if isinstance(manifest, dict) else None
+    if not isinstance(manifest_last_test, str):
+        manifest_last_test = None
+
+    return RunRecord(
+        path=path,
+        task_id=task_id,
+        arm=arm,
+        solved=solved,
+        lane=lane,
+        started_at=started_at,
+        wall_seconds=float(wall_seconds),
+        turns=as_int(metrics.get("num_turns")),
+        cost_value=cost_value,
+        pricing_incomplete=pricing_incomplete,
+        gate_blocks=as_int(metrics.get("gate_blocks")),
+        strikes=as_int(metrics.get("strikes")),
+        workbench_present=raw.get("workbench_present") is True
+        or metrics.get("workbench_present") is True,
+        manifest_last_test=manifest_last_test,
+    )
+
+
+def fmt_number(value: float) -> str:
+    if value == int(value):
+        return str(int(value))
+    return f"{value:.3f}".rstrip("0").rstrip(".")
+
+
+def fmt_rate(numerator: int, denominator: int) -> str:
+    if denominator == 0:
+        return "0/0 (n/a)"
+    percent = (numerator / denominator) * 100
+    return f"{numerator}/{denominator} ({fmt_number(percent)}%)"
+
+
+def fmt_mean(values: list[float]) -> str:
+    if not values:
+        return "n/a (n=0)"
+    return f"{fmt_number(statistics.mean(values))} (n={len(values)})"
+
+
+def fmt_median(values: list[float]) -> str:
+    if not values:
+        return "n/a (n=0)"
+    return f"{fmt_number(statistics.median(values))} (n={len(values)})"
+
+
+def markdown_cell(value: object) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def table(headers: list[str], rows: list[list[object]]) -> list[str]:
+    lines = [
+        "| " + " | ".join(markdown_cell(header) for header in headers) + " |",
+        "| " + " | ".join("---" for _ in headers) + " |",
+    ]
+    for row in rows:
+        lines.append("| " + " | ".join(markdown_cell(cell) for cell in row) + " |")
+    return lines
+
+
+def positive(value: int | None) -> bool:
+    return value is not None and value > 0
+
+
+def lane_column(lane: str) -> tuple[str, str]:
+    return LANE_COLUMNS.get(lane, (f"cost_{lane}", "value"))
+
+
+def cost_display(records: list[RunRecord], lane: str) -> str:
+    lane_records = [record for record in records if record.lane == lane]
+    if not lane_records:
+        return ""
+    priced = [
+        record.cost_value
+        for record in lane_records
+        if record.cost_value is not None and not record.pricing_incomplete
+    ]
+    incomplete_count = len(lane_records) - len(priced)
+    if len(lane_records) == 1:
+        record = lane_records[0]
+        if record.pricing_incomplete or record.cost_value is None:
+            return "~"
+        return fmt_number(record.cost_value)
+    if not priced:
+        return f"~ (priced 0/{len(lane_records)})"
+    mean_value = statistics.mean(priced)
+    if incomplete_count == 0:
+        return f"{fmt_number(mean_value)} (n={len(priced)})"
+    return f"{fmt_number(mean_value)} (priced {len(priced)}/{len(lane_records)}; ~ {incomplete_count})"
+
+
+def summarize(records: list[RunRecord], skipped: list[SkippedRecord], root: Path) -> str:
+    records = sorted(records, key=lambda record: (record.task_id, record.arm, record.started_at, relative_name(root, record.path)))
+    lanes = sorted({record.lane for record in records})
+    arms = sorted({record.arm for record in records})
+    counts_by_arm = {arm: sum(1 for record in records if record.arm == arm) for arm in arms}
+    date_values = sorted(record.started_at for record in records)
+    date_range = f"{date_values[0]} to {date_values[-1]}" if date_values else "n/a"
+
+    lines: list[str] = [
+        "# Albion Bench Report",
+        "",
+        f"Runs directory: `{root}`",
+        f"Run counts by arm: {', '.join(f'{arm}={counts_by_arm[arm]}' for arm in arms) if arms else 'none'}",
+        f"Lanes: {', '.join(lanes) if lanes else 'none'}",
+        f"Date range: {date_range}",
+        "",
+        "## Per-task Results",
+        "",
+    ]
+
+    cost_headers = [lane_column(lane)[0] for lane in lanes]
+    cell_map: dict[tuple[str, str], list[RunRecord]] = defaultdict(list)
+    for record in records:
+        cell_map[(record.task_id, record.arm)].append(record)
+
+    per_task_rows: list[list[object]] = []
+    for task_id, arm in sorted(cell_map):
+        cell_records = cell_map[(task_id, arm)]
+        solved_count = sum(1 for record in cell_records if record.solved)
+        wall_values = [record.wall_seconds for record in cell_records]
+        turn_values = [float(record.turns) for record in cell_records if record.turns is not None]
+        gate_values = [record.gate_blocks for record in cell_records if record.gate_blocks is not None]
+        strike_values = [record.strikes for record in cell_records if record.strikes is not None]
+        row: list[object] = [
+            task_id,
+            arm,
+            len(cell_records),
+            f"{solved_count}/{len(cell_records)}",
+            fmt_number(statistics.mean(wall_values)),
+            fmt_number(statistics.mean(turn_values)) if turn_values else "n/a",
+        ]
+        row.extend(cost_display(cell_records, lane) for lane in lanes)
+        row.extend(
+            [
+                max(gate_values) if gate_values else "n/a",
+                max(strike_values) if strike_values else "n/a",
+                "yes" if any(record.workbench_present for record in cell_records) else "no",
+            ]
+        )
+        per_task_rows.append(row)
+
+    lines.extend(
+        table(
+            ["task_id", "arm", "n", "solved", "wall_seconds_mean", "turns_mean", *cost_headers, "gate_blocks", "strikes", "workbench"],
+            per_task_rows,
+        )
+    )
+    lines.extend(["", "## Aggregates Per Arm", ""])
+
+    aggregate_headers = [
+        "arm",
+        "n",
+        "solve_rate",
+        "wall_seconds_mean_solved",
+        "wall_seconds_median_solved",
+        *[f"{lane_column(lane)[0]}_mean_solved" for lane in lanes],
+        "workbench_rate",
+        "gate_block_incidence",
+        "strike_incidence",
+        "last_test_fidelity",
+    ]
+    aggregate_rows: list[list[object]] = []
+    for arm in arms:
+        arm_records = [record for record in records if record.arm == arm]
+        solved_records = [record for record in arm_records if record.solved]
+        solved_walls = [record.wall_seconds for record in solved_records]
+        cost_means = []
+        for lane in lanes:
+            values = [
+                record.cost_value
+                for record in solved_records
+                if record.lane == lane and record.cost_value is not None and not record.pricing_incomplete
+            ]
+            cost_means.append(fmt_mean(values))
+        aggregate_rows.append(
+            [
+                arm,
+                len(arm_records),
+                fmt_rate(len(solved_records), len(arm_records)),
+                fmt_mean(solved_walls),
+                fmt_median(solved_walls),
+                *cost_means,
+                fmt_rate(sum(1 for record in arm_records if record.workbench_present), len(arm_records)),
+                fmt_rate(sum(1 for record in arm_records if positive(record.gate_blocks)), len(arm_records)),
+                fmt_rate(sum(1 for record in arm_records if positive(record.strikes)), len(arm_records)),
+                fmt_rate(sum(1 for record in solved_records if record.manifest_last_test == "pass"), len(solved_records)),
+            ]
+        )
+    lines.extend(table(aggregate_headers, aggregate_rows))
+    lines.extend(["", "## Honest Notes", ""])
+    lines.append("Single-digit n supports direction, not statistical significance; no significance tests or confidence intervals are reported.")
+    lines.append("")
+    lines.append("Task-arm cell counts:")
+    if cell_map:
+        for task_id, arm in sorted(cell_map):
+            lines.append(f"- {task_id} x {arm}: n={len(cell_map[(task_id, arm)])}")
+    else:
+        lines.append("- none")
+
+    solved_by_task: dict[str, dict[str, tuple[int, int]]] = defaultdict(dict)
+    for (task_id, arm), cell_records in cell_map.items():
+        solved_by_task[task_id][arm] = (
+            sum(1 for record in cell_records if record.solved),
+            len(cell_records),
+        )
+    disagreements = []
+    for task_id in sorted(solved_by_task):
+        outcomes = {solved > 0 for solved, _denominator in solved_by_task[task_id].values()}
+        if len(outcomes) > 1:
+            parts = [
+                f"{arm} {solved}/{denominator}"
+                for arm, (solved, denominator) in sorted(solved_by_task[task_id].items())
+            ]
+            disagreements.append(f"- {task_id}: {', '.join(parts)}")
+    lines.append("")
+    lines.append("Solved disagreements:")
+    lines.extend(disagreements if disagreements else ["- none"])
+
+    lines.append("")
+    lines.append("Skipped records:")
+    if skipped:
+        for item in sorted(skipped, key=lambda skip: relative_name(root, skip.path)):
+            lines.append(f"- {relative_name(root, item.path)}: {item.reason}")
+    else:
+        lines.append("- none")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    root = Path(args.runs_dir).resolve()
+    if not root.is_dir():
+        return fail(f"runs directory does not exist: {root}")
+
+    records: list[RunRecord] = []
+    skipped: list[SkippedRecord] = []
+    for path in sorted(root.rglob("run-record.json")):
+        loaded = load_record(root, path)
+        if isinstance(loaded, SkippedRecord):
+            skipped.append(loaded)
+        else:
+            records.append(loaded)
+
+    report = summarize(records, skipped, root)
+    if args.out:
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(report, encoding="utf-8")
+    else:
+        print(report, end="")
+    return 0
+
+
+raise SystemExit(main(sys.argv[1:]))
+PY
