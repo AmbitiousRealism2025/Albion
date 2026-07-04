@@ -136,9 +136,9 @@
 <div class="wrap">
 <header>
   <div class="strata" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-  <p class="eyebrow">Proposal Companion · v0.1 · 2026-07-04</p>
+  <p class="eyebrow">Proposal Companion · v0.2 · 2026-07-04 · MIT open source</p>
   <h1>Albion<br><em>GLM-5.2 orchestration, built around fable-mode</em></h1>
-  <p class="lede">The successor to Atreides: Z.ai's GLM-5.2 as the main model in a custom Claude Code environment, the fable-mode-glm-5-2 skill as the behavioral core, and deterministic hooks where Atreides trusted the model. Grounded in an 11-agent research mission with live wire-level probes.</p>
+  <p class="lede">A lower-cost option for people who like Claude Code — without sacrificing too much. GLM-5.2 as the main model, fable-mode baked into a unified always-on operating system, deterministic hooks where Atreides trusted the model, pluggable vision, and a tmux Conductor that lets stock Claude Code orchestrate Albion workers. Grounded in an 11-agent research mission with live wire-level probes.</p>
   <div class="meta">
     <span><b>Full proposal</b> docs/proposal/albion-proposal.md</span>
     <span><b>Research</b> docs/research/atreides-analysis.md</span>
@@ -151,7 +151,7 @@
   <div class="stats">
     <div class="stat good"><div class="v">62.1</div><div class="k">GLM-5.2 SWE-bench Pro — top open-weights (Opus 4.8: 69.2) at 3.6–5.7× lower price</div></div>
     <div class="stat hot"><div class="v">13.0 <small>vs 26.0</small></div><div class="k">SWE-Marathon vs Opus 4.8 — half the score on ultra-long autonomy. The gap Albion exists to close</div></div>
-    <div class="stat hot"><div class="v">0<small>/3</small></div><div class="k">Abstract skill descriptions auto-triggering under GLM-5.2 (live probe) — the intent gate must invoke fable-mode by name</div></div>
+    <div class="stat hot"><div class="v">0<small>/3</small></div><div class="k">Abstract skill descriptions auto-triggering under GLM-5.2 (live probe) — solved in v0.2 by baking fable-mode into ALBION.md: nothing left to trigger</div></div>
     <div class="stat good"><div class="v">100%</div><div class="k">Hooks, native subagents &amp; per-task effort routing verified working on the wire against api.z.ai</div></div>
     <div class="stat"><div class="v">$1.20</div><div class="k">Cost of a medium fable-mode task (55 model calls) with warm cache — ≈3 prompt-equivalents on a Coding Plan</div></div>
     <div class="stat"><div class="v">&lt;400</div><div class="k">Line budget for the always-on charter (Atreides shipped ~1,398 after cutting from ~4,000)</div></div>
@@ -164,23 +164,23 @@
   <p class="note">Every rule lives in exactly one layer. Duplication across layers is the documented Atreides failure mode (two contradictory delegation templates, conflicting intent tables).</p>
   <div class="layers">
     <div class="layer l1">
-      <div class="name">fable-mode v2<small>behavioral core (skill)</small></div>
-      <div class="owns"><b>Owns</b>Reasoning discipline: evidence-gated claims, state maps, competing hypotheses, counterexample-first recovery, verification, lessons</div>
-      <div class="never"><b>Never</b>Routing, enforcement, API configuration — frontmatter now carries <span class="mono">effort: xhigh</span> and scoped hooks</div>
+      <div class="name">ALBION.md<small>unified operating system · always-on</small></div>
+      <div class="owns"><b>Owns</b>Charter + fable-mode baked in, one voice (~600 lines): activation contract, intent gate, operating loop, workbench discipline, evidence rules</div>
+      <div class="never"><b>Never</b>Restates native harness behavior; no model matrices, no hardcoded model IDs. Session effort defaults to xhigh → GLM max; delegation downshifts</div>
     </div>
     <div class="layer l2">
-      <div class="name">Charter<small>ALBION.md · always-on</small></div>
-      <div class="owns"><b>Owns</b>Routing &amp; structure: intent gate → fable-on/off + effort tier, phase names, delegation pointer, task-tracking rule</div>
-      <div class="never"><b>Never</b>Restates fable-mode rules or native harness behavior; no model matrices, no hardcoded model IDs</div>
+      <div class="name">Skills &amp; agents<small>on-demand</small></div>
+      <div class="owns"><b>Owns</b>Crown-jewel procedures (maturity, delegation, recovery, completion), vision, conductor; scout / hunter / verifier / simplifier / quick</div>
+      <div class="never"><b>Never</b>Duplicates ALBION.md content — one rule, one layer. fable-mode also ships standalone for stock-CC users</div>
     </div>
     <div class="layer l3">
       <div class="name">Hook suite<small>deterministic enforcement</small></div>
-      <div class="owns"><b>Owns</b>Strike counting, Stop completion gate, destructive-command guard, secrets scrubbing, state re-injection after compaction</div>
+      <div class="owns"><b>Owns</b>Strike counting, Stop completion gate, destructive-command guard, secrets scrubbing, state re-injection, image-read interception</div>
       <div class="never"><b>Never</b>Semantic judgment — hooks check existence and state, the verifier agent checks meaning</div>
     </div>
     <div class="layer l4">
       <div class="name">Launcher<small>albion · albion-env.sh</small></div>
-      <div class="owns"><b>Owns</b>Endpoint, model slots (<span class="mono">glm-5.2[1m]</span>), effort defaults, cache hygiene, timeouts, startup validation</div>
+      <div class="owns"><b>Owns</b>Endpoint, auth lane (Coding Plan or API key), model slots (<span class="mono">glm-5.2[1m]</span>), effort defaults, cache hygiene, startup validation</div>
       <div class="never"><b>Never</b>Sets <span class="mono">CLAUDE_CODE_EFFORT_LEVEL</span> — it would silently kill per-task effort routing</div>
     </div>
   </div>
@@ -262,15 +262,15 @@
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">05</span><h2>The intent gate</h2></div>
-  <p class="note">Effort has exactly three effective positions through this endpoint (off / GLM-high / GLM-max). Routing happens at task boundaries via skill &amp; agent frontmatter — never mid-session flips, never thinking keywords (verified: they don't reach the wire).</p>
+  <div class="sec-head"><span class="sec-num">05</span><h2>The intent gate &amp; the inverted effort model</h2></div>
+  <p class="note">With fable-mode baked in, the gate routes <b>depth and delegation</b>, not skill activation. The main agent defaults to effort xhigh → GLM max (Z.ai's own coding recommendation); delegation <i>downshifts</i>. Three effective tiers (off / high / max), routed at task boundaries via agent frontmatter — never mid-session flips, never thinking keywords (verified: they don't reach the wire).</p>
   <div class="tblwrap"><table>
-    <thead><tr><th>Intent</th><th>Route</th><th>Effort tier</th><th>fable-mode</th></tr></thead>
+    <thead><tr><th>Intent</th><th>Route</th><th>Effort tier</th><th>Workbench</th></tr></thead>
     <tbody>
-      <tr><td><b>Trivial</b> — lookup, one-liner</td><td>Answer directly, or <span class="mono">quick</span> agent (haiku slot → glm-5-turbo)</td><td>thinking-off</td><td>OFF</td></tr>
-      <tr><td><b>Explicit</b> — clear spec, known solution</td><td>Direct execution</td><td>high</td><td>OFF unless multi-file</td></tr>
-      <tr><td><b>Exploratory</b> — find / understand</td><td>Parallel <span class="mono">scout</span> agents</td><td>high</td><td>OFF for scouts</td></tr>
-      <tr><td><b>Open-ended / long-horizon</b></td><td class="win">Invoke Skill(fable-mode-glm-5-2) by name; scaffold workbench</td><td class="win">max (via skill frontmatter)</td><td class="win">ON — mandatory</td></tr>
+      <tr><td><b>Trivial</b> — lookup, one-liner</td><td>Answer directly, or <span class="mono">quick</span> agent (haiku slot → glm-5-turbo)</td><td>thinking-off</td><td>No files (contract's own scaling rule)</td></tr>
+      <tr><td><b>Explicit</b> — clear spec, known solution</td><td>Direct staged execution</td><td>max (main agent)</td><td>Minimal — task.md only if multi-file</td></tr>
+      <tr><td><b>Exploratory</b> — find / understand</td><td>Parallel <span class="mono">scout</span> agents</td><td>high (scouts)</td><td>Summaries feed state-map.md</td></tr>
+      <tr><td><b>Open-ended / long-horizon</b></td><td class="win">Full operating loop + verification agents</td><td class="win">max</td><td class="win">Full, hook-scaffolded</td></tr>
       <tr><td><b>Ambiguous</b></td><td>One clarifying question, reclassify</td><td>—</td><td>—</td></tr>
     </tbody>
   </table></div>
@@ -284,12 +284,21 @@
     <div class="card"><h3>Completion gate <span class="tag">Stop</span></h3><p>Blocks "done" while tasks are open, the last test failed, or verification.md is empty on fable tasks. Loop-guarded, capped at 4 blocks, reads last_assistant_message for evidence-free-claim heuristics. The conversion aimed at GLM's reward-hacking lineage.</p></div>
     <div class="card"><h3>Secrets scrubber <span class="tag">PostToolUse · workbench writes</span></h3><p><span class="mono">updatedToolOutput</span> redaction on .agent-workbench/** — fable-mode's advisory note becomes mechanical.</p></div>
     <div class="card"><h3>State re-injection <span class="tag">SessionStart · compact|resume|clear</span></h3><p>The verified compaction-survival channel. Re-injects task.md + state-map.md + strike/task state, each under the 10k-char cap.</p></div>
-    <div class="card"><h3>Anti-inert discipline <span class="tag">albion doctor</span></h3><p>Every hook integration-tested with recorded real payloads; doctor re-runs the suite on installed hooks. Atreides had 466 tests and zero against the wire format.</p></div>
+    <div class="card"><h3>Image-read interception <span class="tag">PreToolUse · Read on images</span></h3><p>Routes image reads to the vision subsystem and returns the description via <span class="mono">updatedToolOutput</span> — GLM-5.2 never receives raw image content it may mishandle. Degrades gracefully when unconfigured.</p></div>
+    <div class="card"><h3>Anti-inert discipline <span class="tag">albion doctor + CI</span></h3><p>Every hook integration-tested with recorded real payloads; doctor re-runs the suite on installed hooks; CI runs it on every commit. Atreides had 466 tests and zero against the wire format.</p></div>
   </div>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">07</span><h2>Agent roster &amp; cost model</h2></div>
+  <div class="sec-head"><span class="sec-num">07</span><h2>Vision &amp; the Conductor</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Pluggable vision providers <span class="tag">albion-vision</span></h3><p>GLM-5.2 is powerful but not a vision model. Default: <b>GLM-4.6V via the same Z.ai key</b> (zero extra setup). Configurable alternates: Claude, Gemini, OpenAI — or orchestrate out to an external vision-capable agent session via the Conductor protocol. Three levels: one-shot helper CLI, transparent image-read interception, interactive vision session.</p></div>
+    <div class="card"><h3>The Conductor <span class="tag">stock CC ↔ Albion · tmux</span></h3><p>A skill that works in both stock Claude Code and Albion: Fable does architecture and review at frontier prices, sparingly; GLM-5.2 does volume implementation at ~1/5 cost. <b>tmux for transport and observability, files for signaling</b> — the fable workbench is the wire format, and the worker's Stop-gate hook writes the completion manifest. Fire-and-forget baseline; attachable live; harness-neutral protocol. Albion never <i>requires</i> it: standalone strength is the product.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Agent roster &amp; cost model</h2></div>
   <div class="tblwrap"><table>
     <thead><tr><th>Agent</th><th>Frontmatter</th><th>Role</th></tr></thead>
     <tbody>
@@ -309,21 +318,23 @@
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">08</span><h2>Roadmap</h2></div>
+  <div class="sec-head"><span class="sec-num">09</span><h2>Roadmap</h2></div>
   <ul class="timeline">
     <li class="done"><span class="m">M0</span><h3>Verification matrix</h3><p>Filled by live research probes. Remaining: cache-keying on effort, subagent prompt-accounting, current Pro/Max pricing.</p></li>
     <li><span class="m">M1</span><h3>Launcher + doctor</h3><p>albion / albion --vanilla / claude modes; startup validation fails loudly on wrong endpoint, silent model remap, or version &lt; 2.1.163; synthetic payloads through every hook.</p></li>
     <li><span class="m">M2</span><h3>Hook suite + session-state engine</h3><p>Five hooks with recorded-payload tests. Exit: Stop gate blocks a fake "done"; strike counter injects at 2; scrubber redacts a planted secret.</p></li>
-    <li><span class="m">M3</span><h3>Charter + skills + agents, packaged as a plugin</h3><p>ALBION.md &lt;400 lines; fable-mode v2 with effort frontmatter + scoped hooks + namespaced workbench; 4 crown-jewel skills; 5 agents. Exit: gate invokes fable-mode by name end-to-end.</p></li>
-    <li><span class="m">M4</span><h3>Telemetry + bench (continuous from M2)</h3><p>ab-test-plan.md metrics become permanent per-task telemetry; three-arm A/B finally answers whether fable-mode measurably improves GLM-5.2's long-horizon discipline.</p></li>
-    <li><span class="m">M5</span><h3>Hardening</h3><p>Provider abstraction with data-sovereignty toggle; optional Claude-backed frontier review lane; lessons-promotion flow; bench green across ≥2 providers.</p></li>
+    <li><span class="m">M3</span><h3>ALBION.md + skills + agents, packaged as a plugin</h3><p>Unified ~600-line operating system (fable-mode baked in); manifest→compile pipeline; 4 crown-jewel skills; 5 agents. Exit: a long-horizon task runs the full loop end-to-end solo; fable-mode also usable standalone in stock CC.</p></li>
+    <li><span class="m">M4</span><h3>Vision + Conductor</h3><p>Provider registry (GLM-4.6V default, Claude/Gemini/OpenAI/external alternates), albion-vision helper, image-read hook; conductor skill with the completion-manifest protocol. Exit: a Fable session dispatches an Albion worker and reviews its manifest.</p></li>
+    <li><span class="m">M5</span><h3>Telemetry + bench (continuous from M2)</h3><p>Dual cost model (prompt-equivalents on plan, dollars on API); three-arm A/B finally answers whether fable-mode measurably improves GLM-5.2's long-horizon discipline.</p></li>
+    <li><span class="m">M6</span><h3>OSS release 1.0 — the pristine repo</h3><p>MIT, CONTRIBUTING, SECURITY, templates, CI running the recorded-payload hook tests, semver releases, fresh-machine quickstart ≤5 min, data-sovereignty disclosure. Grant-submission-ready.</p></li>
+    <li><span class="m">M7</span><h3>Hardening</h3><p>Provider abstraction with data-sovereignty toggle; interactive conductor steering; lessons-promotion flow; bench green across ≥2 providers. Then: Oakdale (Opencode) and Bower Lake (Pi) ports over the same manifest and conductor bus.</p></li>
   </ul>
 </section>
 
 <section>
-  <div class="sec-head"><span class="sec-num">09</span><h2>Tensions the design resolves — and how</h2></div>
+  <div class="sec-head"><span class="sec-num">10</span><h2>Tensions the design resolves — and how</h2></div>
   <ol class="tensions">
-    <li><b>Trigger authority</b>Auto-triggering is unreliable → the always-on gate owns fable-on/off and invokes by name; explicit /fable-mode always works as user override.</li>
+    <li><b>Trigger authority</b>Dissolved in v0.2: fable-mode is baked into ALBION.md, so there is nothing to trigger. The gate now routes only depth and delegation.</li>
     <li><b>Hooks vs prompts</b>Hooks check existence and state; the skill owns honesty; the verifier agent is the semantic layer. Every rule assigned to exactly one substrate.</li>
     <li><b>Compliance vs coverage</b>GLM needs more structure but obeys long lists less. The &lt;400-line charter is a hypothesis — A/B compliance probes live in the bench.</li>
     <li><b>Two state systems</b>Model writes prose (workbench); hooks write JSON (session-state); JSON wins on disagreement.</li>
@@ -335,7 +346,7 @@
 </section>
 
 <footer>
-  <span>Albion proposal v0.1 — prepared 2026-07-04 by the Albion research mission (11 agents, 291 tool calls, live Z.ai probes).</span>
+  <span>Albion proposal v0.2 — prepared 2026-07-04 by the Albion research mission (11 agents, 291 tool calls, live Z.ai probes); revised after maintainer review. MIT licensed.</span>
   <span>Sources: github.com/AmbitiousRealism2025/Atreides · deepwiki.com/AmbitiousRealism2025/Atreides · ~/.claude/skills/fable-mode-glm-5-2 · docs.z.ai · code.claude.com/docs</span>
 </footer>
 </div>

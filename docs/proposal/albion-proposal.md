@@ -1,9 +1,11 @@
 # Albion: Proposal for a GLM-5.2 Orchestration System Built Around Fable-Mode
 
-**Version:** 0.1 (proposal for review)
+**Version:** 0.2 (proposal for review)
 **Date:** 2026-07-04
 **Basis:** [Deep research analysis](../research/atreides-analysis.md) — 11-agent research mission over the Atreides repo, DeepWiki, the fable-mode-glm-5-2 skill, GLM-5.2's live documentation, and wire-level probes against the Z.ai endpoint.
 **Companion:** [Visual companion (HTML)](albion-companion.html)
+
+**Changes in v0.2** (post-review direction from the maintainer): fable-mode is now **baked into a unified ALBION.md** rather than gated behind skill invocation; a **pluggable vision subsystem** is added; a **Conductor** skill (stock Claude Code ↔ Albion orchestration over tmux) is promoted to a first-class deliverable; the project is **MIT open-source** with a pristine-repo/OSS milestone; both **Z.ai API and Coding Plan** auth lanes are supported; portability to Opencode ("Oakdale") and Pi ("Bower Lake") becomes a standing design constraint.
 
 ---
 
@@ -11,356 +13,337 @@
 
 Albion is the deliberate combination of three things that already exist but have never been joined:
 
-1. **A working GLM-5.2 Claude Code environment** (`claude-glm-env.sh`, the `cglm` launcher) — Z.ai's Anthropic-compatible endpoint, opus-slot→glm-5.2 mapping, 1M context.
+1. **A working GLM-5.2 Claude Code environment** — Z.ai's Anthropic-compatible endpoint, opus-slot→glm-5.2 mapping, 1M context.
 2. **The fable-mode-glm-5-2 skill** — an evidence-first operating discipline that counters GLM-5.2's exact documented failure modes (long-horizon drift, ungrounded progress claims, premature convergence).
 3. **Atreides' model-agnostic orchestration IP** — intent gating, maturity assessment, delegation templates, exploration termination, completion gates — *stripped of its persona theater, its broken hook layer, and its Anthropic-coupled model routing.*
 
 The organizing principle, dictated by the research: **GLM-5.2 inverts the enforcement equation.** Claude tolerated honor-system orchestration; GLM-5.2 (SWE-Marathon 13.0 vs Opus 4.8's 26.0, reward-hacking lineage, drift under long horizons) requires that every rule that *can* be enforced deterministically *is* enforced deterministically, and that everything left in the prompt is radically compressed.
 
-### The four-layer division of labor
+### The product goal
+
+**Give people who like Claude Code a lower-cost option that does not sacrifice too much.** Albion must be a complete, strong system **standing alone** — the Conductor, vision, and frontier lanes are amplifiers, never dependencies. Success is a solo `albion` session being the best GLM-5.2 coding experience available.
+
+### The four layers
 
 | Layer | Owns | Never does |
 |---|---|---|
-| **fable-mode skill** | Reasoning discipline: sustained reasoning, tool evidence, state definitions, hypotheses, verification, memory hygiene | Routing, enforcement, API configuration |
-| **Albion charter** (always-on, <400 lines) | Routing & structure: intent gate → fable-on/off + effort tier, phase names, delegation template, workbench pointers | Restating fable-mode rules or native harness behavior |
-| **Hook suite** | Enforcement: strike counting, completion blocking, destructive-command guard, secrets scrubbing, state re-injection | Semantic judgment (hooks are deterministic and blind) |
-| **Launcher** | Configuration: endpoint, model IDs, effort defaults, context/output limits, cache hygiene, timeouts | Behavior |
+| **ALBION.md** (unified operating system: charter + fable-mode baked in, one voice) | Routing & reasoning discipline: intent gate, phase loop, workbench discipline, evidence rules, communication style | Restating native harness behavior; enforcement; API configuration |
+| **On-demand skills & agents** | Crown-jewel procedures (maturity, delegation, recovery, completion reference), vision, conductor; scout/hunter/verifier/simplifier/quick agents | Duplicating ALBION.md content |
+| **Hook suite** | Enforcement: strike counting, completion blocking, destructive-command guard, secrets scrubbing, state re-injection, image-read interception | Semantic judgment (hooks are deterministic and blind) |
+| **Launcher** | Configuration: endpoint, auth lane (API/plan), model slots, effort defaults, cache hygiene, startup validation | Behavior; setting `CLAUDE_CODE_EFFORT_LEVEL` (kills per-task routing) |
 
-Every rule is assigned to **exactly one layer**. Duplicating a rule across layers doubles drift surface — the documented Atreides pathology (two contradictory delegation templates, conflicting intent tables).
+Every rule lives in **exactly one layer** — duplication across layers is the documented Atreides drift pathology.
 
 ---
 
 ## 1. Repository & Deliverable Layout
 
-Albion ships as a **Claude Code plugin** plus a thin launcher. No Handlebars, no npm-installed global state, no symlink hacks.
-
 ```
 albion/
+├── LICENSE                       # MIT
 ├── bin/
 │   ├── albion                    # launcher (sources env, validates, execs claude)
-│   └── albion-doctor             # health/contract verification CLI
+│   ├── albion-doctor             # health/contract verification CLI
+│   └── albion-vision             # one-shot vision helper (image + prompt → text)
 ├── env/
-│   └── albion-env.sh             # GLM environment (successor to claude-glm-env.sh)
+│   └── albion-env.sh             # GLM environment (API-key and Coding-Plan lanes)
 ├── plugin/                       # the "albion" Claude Code plugin
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/
-│   │   ├── fable-mode-glm-5-2/   # behavioral core (v2, see §4)
-│   │   ├── maturity-assessment/  # crown jewel #1
-│   │   ├── delegation/           # crown jewel #2 (7-section template)
-│   │   ├── recovery/             # crown jewel #3 (counterexample-first + strikes)
-│   │   └── completion-gate/      # crown jewel #4 (NEVER/ALWAYS reference)
+│   │   ├── fable-mode-glm-5-2/   # standalone skill (for stock-CC users; content is
+│   │   │                         #   also baked into ALBION.md for Albion sessions)
+│   │   ├── maturity-assessment/
+│   │   ├── delegation/
+│   │   ├── recovery/
+│   │   ├── completion-gate/
+│   │   ├── vision/               # vision subsystem front-end (§6)
+│   │   └── conductor/            # cross-session orchestration (§7)
 │   ├── agents/
 │   │   ├── scout.md              # read-only explorer (effort: high)
 │   │   ├── counterexample-hunter.md
 │   │   ├── verifier.md           # fresh-context verification (effort: xhigh)
 │   │   ├── simplifier.md
 │   │   └── quick.md              # trivial tier (model: haiku → glm-5-turbo, thinking off)
-│   ├── hooks/hooks.json          # the five enforcement hooks
+│   ├── hooks/hooks.json
 │   └── scripts/                  # hook implementations (jq over stdin JSON)
 ├── charter/
-│   └── ALBION.md                 # the <400-line always-on charter
+│   └── ALBION.md                 # the unified operating system (~550–650 lines)
 ├── manifest/
-│   └── albion-manifest.yaml      # single source of truth → compiles charter/skills/docs
+│   └── albion-manifest.yaml      # single source of truth; targets: claude-code
+│                                 #   (future: oakdale/opencode, bower-lake/pi)
 ├── state/                        # session-state JSON engine (schema + helpers)
-├── telemetry/                    # per-task metrics (ab-test-plan.md metrics, permanent)
-├── bench/                        # internal regression benchmark (per model/provider bump)
+├── telemetry/                    # per-task metrics; dual cost model (tokens vs prompts)
+├── bench/                        # regression benchmark (per model/provider bump)
+├── .github/                      # CI, issue/PR templates, CONTRIBUTING, SECURITY
 └── docs/
 ```
 
-**Distribution:** plugin marketplace entry (commit-SHA pinned) for the plugin; `albion` launcher installed to `~/bin`. `albion doctor` diffs installed assets against the package version manifest — the drift Atreides never detected becomes a checkable invariant.
+**Distribution:** plugin-marketplace entry (commit-SHA pinned) + one-command installer that works on a **fresh machine** — no assumptions about pre-existing GLM setups. `albion doctor` diffs installed assets against the version manifest.
+
+**Note on fable-mode as a standalone skill:** the skill keeps shipping as an independently usable artifact — stock Claude Code users (any backing model) can adopt just the skill. This is deliberate OSS surface area: the skill is the gateway drug; Albion is the full system.
 
 ---
 
-## 2. Layer 1 — The Launcher (`albion`)
+## 2. Layer 4 — The Launcher (`albion`)
 
-The launcher **sources** the GLM environment (Atreides' wrapper unset it — the single decision Albion reverses first) and execs Claude Code with the charter appended.
+### 2.1 Auth lanes: Coding Plan and API key (both first-class)
 
-### 2.1 `env/albion-env.sh` (verified values)
+Both lanes hit the same `https://api.z.ai/api/anthropic` endpoint with different tokens and different economics:
+
+| | Coding Plan | API key |
+|---|---|---|
+| Metering | **Prompts** per 5h window (~15–20 model calls each); 3× at peak (14:00–18:00 UTC+8) | **Tokens** ($1.40/M in, $0.26/M cached, $4.40/M out) |
+| Best for | Daily-driver usage (Lite $18/mo ≈ 9–25 medium tasks/window) | Overflow, CI, bursty fan-out |
+| Telemetry must report | Prompt-equivalents consumed (calls ÷ ~18, × peak multiplier) | Token cost from `usage`/`modelUsage` |
+
+`albion-env.sh` reads `ALBION_AUTH_LANE=plan|api` (+ the corresponding token env var), and telemetry reports the correct cost model for the active lane. Claude Code's own `total_cost_usd` is ignored (verified wrong under Z.ai).
+
+### 2.2 Environment (verified values)
 
 ```bash
-# Endpoint — /api/anthropic, never /api/paas/v4 (documented silent failure mode)
-export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
-export ANTHROPIC_AUTH_TOKEN="${ZAI_API_KEY:?set ZAI_API_KEY}"
+export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"   # never /api/paas/v4
+export ANTHROPIC_AUTH_TOKEN="${ALBION_ZAI_TOKEN:?set ALBION_ZAI_TOKEN}"
 
-# Model slots — [1m] suffix is REQUIRED to unlock 1M context (client-side convention;
-# raw API rejects it, Claude Code strips it and sets contextWindow=1000000)
+# [1m] suffix REQUIRED to unlock 1M context (client-side convention)
 export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2[1m]"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2[1m]"   # Z.ai serves glm-5.2 for glm-5.1 anyway
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"    # the ONLY genuinely different tier
+export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2[1m]"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"           # the only genuinely different tier
 
 export API_TIMEOUT_MS=3000000
 export CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000
 export CLAUDE_CODE_MAX_OUTPUT_TOKENS=131072
 
-# Cache hygiene (the 17k-token tool JSON is the largest cacheable asset; cached input $0.26/M)
-export CLAUDE_CODE_ATTRIBUTION_HEADER=0               # removes uncached fingerprint block
-export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1     # kills background haiku-slot calls
+# Cache hygiene (cached input $0.26/M; the ~17k-token tool JSON is the largest cacheable asset)
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
-
-# Completion-gate budget (deliberate, not default)
 export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=4
 
-# ── LANDMINES (never set) ────────────────────────────────────────────
-# CLAUDE_CODE_EFFORT_LEVEL   → overrides skill/agent frontmatter effort; collapses
-#                              per-task routing to a session constant. Session default
-#                              comes from settings.json "effortLevel" instead.
-# MAX_THINKING_TOKENS=N      → ignored on the adaptive path (0 is meaningful: thinking off)
+# NEVER set CLAUDE_CODE_EFFORT_LEVEL (overrides frontmatter; collapses per-task routing).
+# Session default effort comes from settings.json "effortLevel": "xhigh".
 ```
 
-### 2.2 Modes (A/B evaluation is a first-class feature)
+### 2.3 Modes
 
-| Command | Environment | Purpose |
+| Command | Purpose |
+|---|---|
+| `albion` | The product: GLM-5.2 + ALBION.md + plugin |
+| `albion --vanilla` | GLM-5.2 bare — the A/B control arm |
+| `albion --doctor` | Full health matrix; non-zero exit on any red cell |
+| `claude` | Untouched stock Claude Code (baseline / conductor host) |
+
+### 2.4 Startup validation (fails loudly)
+
+Endpoint is `/api/anthropic`; a 1-token probe returns model `glm-5.2` (catches silent slot remapping); Claude Code ≥ 2.1.163 (warn < 2.1.195); auth lane configured; every hook answers a synthetic stdin payload correctly.
+
+---
+
+## 3. Layer 1 — ALBION.md: The Unified Operating System
+
+**The v0.2 structural decision: fable-mode is baked in, not gated.** Merging the charter and the skill into one always-on document with one voice dissolves the trigger-authority tension entirely (the 0/3 auto-trigger problem stops mattering — there is nothing to trigger), eliminates two-document drift (the Atreides pathology), and costs ~2.2k always-on tokens (~$0.0006/turn cached; quota-free on the plan).
+
+**Target: ~550–650 lines**, structured for GLM-5.2's instruction-following profile:
+
+1. **Identity + activation contract (top).** One identity line, then fable-mode's 6-rule contract verbatim — autonomy on reversible actions, pause on destructive/scope/secrets, analysis-means-no-fix, no scope creep, **no unevidenced progress claims**, no raw reasoning exposure.
+2. **The intent gate (routing table).** Simplified from v0.1 — it no longer decides skill invocation, only *depth and delegation*:
+
+   | Intent | Route | Workbench |
+   |---|---|---|
+   | Trivial | Answer directly or `quick` agent (thinking-off tier) | No files (the contract's own scaling rule) |
+   | Explicit | Direct staged execution | Minimal (task.md only if multi-file) |
+   | Exploratory | Parallel `scout` agents | scout summaries feed state-map.md |
+   | Open-ended / long-horizon | Full operating loop + workbench + verification agents | Full, hook-scaffolded |
+   | Ambiguous | One clarifying question, reclassify | — |
+
+3. **The operating loop.** Scope Lock → State Map → Hypotheses → Staged Execution → Independent Verification → Report — fable-mode's full procedure, including boundary probes, danger-lantern names, counterexample-first recovery.
+4. **Workbench specification** (compact) + task-tracking rule (TaskCreate/TaskUpdate — GLM never self-initiates tracking; verified).
+5. **Delegation pointer** (7-section template lives in the `delegation` skill) + guard rails.
+6. **Communication style + stop rule.**
+7. **Re-anchor line (bottom).** A one-line restatement of the contract — the top-and-bottom duplication is an empirically motivated adherence hack, kept in minimal form.
+
+**GLM-specific writing style throughout:** terse imperatives, tables over prose, current tool names, no persona repetition, factual (not exhortative) phrasing.
+
+### The inverted effort model
+
+With fable-mode always-on, effort control inverts relative to v0.1 — simpler and stronger:
+
+- **Session default: `effortLevel: xhigh`** in settings.json → GLM `reasoning_effort: max` (Z.ai's own recommendation for coding). The main agent always reasons at full depth.
+- **Downshift via delegation:** `quick` (haiku slot, thinking-off) for trivial work; `scout`/`simplifier` at `effort: high` for volume exploration. Wire-verified: agent frontmatter reaches the API per-task.
+- Three effective tiers remain (off / high / max); routing happens only at task boundaries (cache-safe).
+
+**What stays a hypothesis:** the compliance-vs-coverage curve. ~600 always-on lines is a bet; the bench A/Bs it (`albion` vs `albion --vanilla`), and the manifest structure makes shrinking or growing the document a compile-time decision, not a rewrite.
+
+---
+
+## 4. Layer 2 — On-Demand Skills & the Agent Roster
+
+Crown-jewel skills (unchanged from v0.1): `maturity-assessment`, `delegation`, `recovery`, `completion-gate` — compact, loaded on demand, compiled from the manifest.
+
+| Agent | Frontmatter | Contract |
 |---|---|---|
-| `claude` | Anthropic, clean | Baseline / frontier lane |
-| `albion` | GLM-5.2 + charter + plugin | The product |
-| `albion --vanilla` | GLM-5.2, no charter/plugin | Control arm for the A/B loop |
-| `albion --doctor` | — | Run the full health matrix, exit non-zero on any red cell |
+| `scout` | effort: high, read-only tools | Question / Key Findings / Patterns / Recommendations, ≤500 words, termination criteria built in |
+| `counterexample-hunter` | effort: xhigh | Break the current hypothesis; failing case or "no break found" + what was tried |
+| `verifier` | effort: xhigh | Fresh-context review vs task.md + tests; never sees the implementation transcript |
+| `simplifier` | effort: high, read-only | Scope drift + unnecessary abstraction vs task.md |
+| `quick` | model: haiku (→ glm-5-turbo) | Trivial tier; thinking auto-off; cheapest by price and quota |
 
-### 2.3 Startup validation (fails loudly)
-
-1. Endpoint reachable and is `/api/anthropic` (not `/api/paas/v4`).
-2. A 1-token probe request returns model `glm-5.2` (catches silent server-side remapping — Z.ai has changed slot defaults post-launch before).
-3. Claude Code version ≥ **2.1.163** (Stop additionalContext) — warn under 2.1.195 (matcher semantics).
-4. Charter file resolves; every plugin hook responds correctly to a synthetic stdin payload (see §5.6).
+Delegation economics: GLM-5.2 at 3.6–5.7× below Opus pricing means Albion is *more* aggressive with parallel scouts than Atreides' cost math ever allowed.
 
 ---
 
-## 3. Layer 2 — The Charter (`ALBION.md`, always-on, <400 lines)
+## 5. Layer 3 — The Hook Enforcement Suite
 
-The charter is what remains after moving reasoning discipline into the skill, enforcement into hooks, and configuration into the launcher. Target: **under 400 lines / ~3.5k tokens**. Contents:
+Six hooks (v0.1's five, plus image-read interception), all command-type, exec-form, JSON-on-stdin, integration-tested with recorded real payloads. Minimum Claude Code 2.1.163.
 
-### 3.1 Identity (3 lines, not 65)
+1. **Destructive-command guard** (PreToolUse) — `permissionDecision: deny` (works even in bypassPermissions); Atreides' normalization pipeline ported verbatim and finally wired in; modern-syntax permissions deny-list as the hard floor.
+2. **Strike counter** (PostToolUse) — per-operation failure counts in session-state JSON; injects "Strike 2 of 3" as factual context; strike 3 → counterexample-first recovery, git-revert demoted to escalation.
+3. **Completion gate** (Stop) — blocks "done" while tasks are open, the last test failed, or verification.md is empty on workbench tasks; loop-guarded, capped (4); reads `last_assistant_message` for evidence-free-claim heuristics. Aimed squarely at GLM's reward-hacking lineage.
+4. **Secrets scrubber** (PostToolUse on `.agent-workbench/**` writes) — `updatedToolOutput` redaction; fable-mode's advisory note becomes mechanical.
+5. **State re-injection** (SessionStart, matchers `startup|resume|clear|compact`) — the verified compaction-survival channel; re-injects task.md + state-map.md + strike/task state, each under the 10k-char cap.
+6. **Image-read interception** (PreToolUse on Read of image files) — routes to the vision subsystem (§6) and returns the description via `updatedToolOutput`/`updatedInput`, so GLM-5.2 never receives raw image content it may mishandle. Degrades gracefully: with no vision provider configured, it injects a factual "no vision provider available" note instead.
 
-```
-You are Albion, an orchestration agent running GLM-5.2. Delegate liberally,
-verify mechanically, claim nothing without evidence.
-```
-
-`CLAUDE_AGENT_NAME=Albion` supplies status-line identity. No mandatory response prefix — the research verdict is that prefix theater costs compliance budget GLM-5.2 cannot spare. A single announcement line at delegation boundaries only. *(A/B test persona-on vs persona-off before locking this.)*
-
-### 3.2 The Intent Gate — Albion's core routing table
-
-The single most important empirical finding: **abstract skill descriptions never auto-trigger under GLM-5.2 (0/3), while by-name invocation is fully reliable.** The gate is therefore the *trigger authority* for fable-mode, and it invokes the skill **by name**.
-
-| Intent | Signals | Route | Effort tier | fable-mode |
-|---|---|---|---|---|
-| **Trivial** | lookup, one-liner, quick question | Answer directly or `quick` agent | thinking-off (haiku slot) | OFF (skill's own negative scope) |
-| **Explicit** | clear requirements, known solution | Direct execution | high | OFF unless multi-file |
-| **Exploratory** | "find/understand/where" | `scout` agent(s), parallel | high | OFF for scouts; ON for synthesis if complex |
-| **Open-ended / long-horizon** | architecture, migration, ambiguous bug, multi-step | **Invoke `Skill(fable-mode-glm-5-2)` by name**, scaffold workbench | **max** (via skill frontmatter) | **ON — mandatory** |
-| **Ambiguous** | unclear intent | One clarifying question, then reclassify | — | — |
-
-Effort has exactly **three effective positions** through this endpoint (off / GLM-high / GLM-max; CC low/medium/high collapse to high, xhigh/max to max). The gate is a 3-way router — no finer gradations are promised, and thinking keywords are never used as routing signals (verified: they don't change the wire).
-
-Routing is applied at **task boundaries** (skill/agent frontmatter — wire-verified), never by flipping `/effort` mid-session (cache invalidation risk).
-
-### 3.3 Phase vocabulary — fable-mode's, not Atreides'
-
-The two state machines are isomorphic; Albion keeps **one**:
-
-**Scope Lock → State Map → Hypotheses → Staged Execution → Independent Verification → Report**
-
-The charter carries only the phase names and gate rules (<50 lines). The full procedure lives in the skill. Atreides' transition semantics (what triggers movement between phases) carry over inside the new vocabulary.
-
-### 3.4 Delegation (pointer + guard rails)
-
-The canonical 7-section template (TASK / EXPECTED OUTCOME / CONTEXT / MUST DO / MUST NOT DO / TOOLS ALLOWED / SUCCESS CRITERIA) lives in the `delegation` skill and the agent definitions; the charter carries a 5-line reminder: delegate to named agents, one template, subagents don't spawn subagents, scouts return summaries not file dumps.
-
-### 3.5 Task-tracking rule (kept deliberately)
-
-Verified: GLM-5.2 **never self-initiates task tracking** but complies perfectly when instructed — and TodoWrite does not exist in current Claude Code (TaskCreate/TaskUpdate do). The charter keeps one explicit rule: multi-step work uses TaskCreate/TaskUpdate with in_progress→completed transitions. This is a rule that *cannot* be dropped as redundant.
-
-### 3.6 What the charter deliberately does NOT contain
-
-- Restated fable-mode rules (evidence discipline, workbench mechanics, recovery protocol)
-- Restated native behavior (how subagents work, plan mode, permissions)
-- References to TodoWrite/Grep/Glob (tools that no longer exist)
-- Model-selection matrices (meaningless: Z.ai serves glm-5.2 regardless of opus/sonnet slot)
-- Hardcoded model IDs (the fossilized `claude-3-opus-20240229` lesson)
+**Anti-inert discipline:** every hook ships with recorded-payload tests; `albion doctor` re-runs them against the installed hooks; CI runs them on every commit. (Atreides had 466 tests and zero against the wire format.)
 
 ---
 
-## 4. Layer 3 — fable-mode-glm-5-2 v2 (the behavioral core, upgraded)
+## 6. The Vision Subsystem
 
-The skill's content survives nearly intact — the research validated its design against GLM-5.2's actual failure modes. The v2 changes are structural, wiring it into the harness:
+GLM-5.2 is powerful but not a vision model. Albion treats vision as a **pluggable capability with multiple provider options** — more options makes the project more appealing, even where that means orchestrating out to external platforms.
 
-### 4.1 Frontmatter (new)
+### 6.1 Provider registry (config-driven)
 
-```yaml
----
-name: fable-mode-glm-5-2
-description: >
-  [unchanged prose, but auto-triggering is treated as decorative under GLM-5.2 —
-  the Albion intent gate invokes this skill by name]
-effort: xhigh            # wire-verified: skill frontmatter reaches output_config.effort
-                         # → GLM reasoning_effort "max", Z.ai's own recommendation
-hooks:                   # scoped to the skill's active lifetime, auto-cleaned
-  SessionStart:
-    - matcher: "compact|resume"
-      hooks: [{ type: command, command: "${CLAUDE_PROJECT_DIR}/.albion/scripts/reinject-workbench.sh" }]
-  Stop:
-    - hooks: [{ type: command, command: "${CLAUDE_PROJECT_DIR}/.albion/scripts/fable-completion-gate.sh" }]
----
+```toml
+# .albion/config.toml
+[vision]
+provider = "zai-glm-4.6v"        # default: same Z.ai key, zero extra setup
+
+[vision.providers.zai-glm-4.6v]  # Z.ai native API, one vendor one bill
+[vision.providers.anthropic]     # ANTHROPIC_API_KEY → Claude (also the conductor host)
+[vision.providers.gemini]        # GEMINI_API_KEY
+[vision.providers.openai]        # OPENAI_API_KEY
+[vision.providers.external]      # orchestrate out: dispatch to a vision-capable
+                                 # agent session via the Conductor protocol (§7)
 ```
 
-Invoking fable-mode now *automatically* escalates GLM-5.2 to `reasoning_effort: max` and arms the fable-specific gates — the run-config tiers the skill could only describe become mechanical.
+### 6.2 Three integration levels
 
-### 4.2 Workbench fixes (the skill's unfinished edges)
-
-- **Namespaced per task:** `.agent-workbench/fable-mode/<task-slug>/` — concurrent tasks no longer collide.
-- **Hook-scaffolded:** a SessionStart/first-use hook creates the workbench from `templates/workbench-templates.md`, saving model tokens and guaranteeing structure.
-- **Gitignored by default** (`albion init` adds `.agent-workbench/` — already done in this repo).
-- **Lifecycle:** on completion-gate pass, the workbench is archived to `.albion/archive/<task-slug>/` and `lessons/` candidates are surfaced for promotion.
-- **Secrets rule enforced:** PostToolUse `updatedToolOutput` scrubber on `.agent-workbench/**` writes (see §5.4) — the redaction note stops being advisory.
-
-### 4.3 Content adjustments
-
-- Replace "TodoWrite"-era references with TaskCreate/TaskUpdate semantics.
-- Keep escalation phrases ("think hard") only as stylistic nudges — the skill no longer *pretends* they control effort; frontmatter does.
-- The four subagent roles get one line each pointing to the real agent definitions (§6).
-- The stop rule gains a sentence: "The Stop gate will block completion if verification.md is empty — fill it honestly, not to satisfy the gate." (Semantic honesty stays a prompt rule; existence/recency is the hook's job.)
-
----
-
-## 5. Layer 4 — The Hook Enforcement Suite
-
-Five hooks, all **command-type** (deterministic; prompt/agent hooks reserved as a future judgment layer), all exec-form with `${CLAUDE_PROJECT_DIR}`, all reading JSON from stdin, all integration-tested with recorded real payloads. Minimum Claude Code 2.1.163.
-
-### 5.1 Destructive-command guard (PreToolUse)
-
-- **Mechanism:** `hookSpecificOutput.permissionDecision: "deny"` + reason — **works even in bypassPermissions mode** (strongest primitive in the platform). Never the deprecated top-level decision fields.
-- **Logic:** port Atreides' `validate-bash-command.sh` normalization pipeline verbatim (URL-decode, backslash-strip, hex/octal, quote-strip — it is genuinely good code that was never actually wired in).
-- **Hard floor:** the permissions deny-list in settings.json, migrated to modern syntax (`Bash(rm:*)` etc.), keeping every obfuscation variant (`%72m`, `\rm`, `'rm'`, `command rm`, `/bin/rm`, `builtin eval`) and all secret-file Read/Write denies. Docs are explicit that the permission system, not hooks, is the guaranteed path — Albion uses both, deliberately layered.
-- Implements fable-mode activation-contract rule 2 mechanically.
-
-### 5.2 Strike counter (PostToolUse)
-
-- Maintains per-operation failure counts in the session-state JSON (keyed by `session_id` from the hook input; operation = file + change type, Atreides' precise definitions).
-- Injects via `hookSpecificOutput.additionalContext` (plain stdout is debug-only on this event), phrased as **factual state** — "Strike count: 2 of 3 on editing src/parser.ts" — because imperative out-of-band commands can trip injection defenses.
-- On strike 3: injects the recovery protocol pointer — **counterexample-first** (log to counterexamples.jsonl, re-read task.md/state-map.md, shrink the next check), with git-revert demoted to escalation after repeated counterexample-loop failure. The hook counts; the model reasons.
-- If parallel tool calls make per-call injection noisy, move to PostToolBatch (fires once per batch).
-
-### 5.3 Completion gate (Stop)
-
-The single most important conversion from honor system to mechanism — aimed squarely at GLM-5.2's reward-hacking lineage.
-
-- **Blocks** (`{"decision":"block","reason":"<specific unchecked items>"}`) when session-state shows: open TaskCreate items; last recorded test/build failed; or — on fable-mode tasks — `verification.md` missing/empty or `evidence.md` lacks entries for claimed results.
-- **Guards:** respects `stop_hook_active`; own on-disk attempt counter; `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=4` set deliberately in the launcher; consults `background_tasks[]`/`session_crons[]` so it never fights a legitimately-waiting session.
-- Uses `last_assistant_message` for a cheap "claimed done without evidence" heuristic (completion verbs + zero fresh tool output → block once with a pointed reason).
-- Soft nudges use Stop `additionalContext` (renders as feedback, not error noise).
-
-### 5.4 Workbench secrets scrubber (PostToolUse, matcher: Write|Edit on `.agent-workbench/**`)
-
-- `updatedToolOutput` (shape-matched per tool, or it is silently ignored) + PreToolUse `updatedInput` for outbound redaction; `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` in the launcher.
-- Documented honestly: scrubbing protects context and files, not transcripts/telemetry.
-
-### 5.5 State re-injection (SessionStart, matchers: `startup|resume|clear|compact`)
-
-- **The verified compaction-survival mechanism.** PreCompact injection does not exist (the Atreides `cat` hack targeted a channel that was never there); SessionStart with matcher `compact` is the documented, probe-confirmed channel — `additionalContext` arrives verbatim.
-- Re-injects: `task.md` + `state-map.md` + open strike/task state + relevant `lessons/` — each payload under the 10,000-char cap or it degrades to a file-path preview.
-- PostCompact hook refreshes the state files so the next injection is current.
-- Static rules never travel this channel — CLAUDE.md/charter re-load natively after compaction.
-
-### 5.6 The anti-inert-hook discipline (how Albion avoids Atreides' fate)
-
-- Every hook has a **recorded-payload integration test**: pipe captured real event JSON in, assert exit code and JSON shape. (Atreides had 466 tests and zero against the wire format.)
-- `albion doctor` runs the same suite against the *installed* hooks, verifies every hook appears in `/hooks` with the expected source, and greps a `--debug-file` session for "Executing hooks for".
-- Iron rules encoded in CI: exit 1 never blocks; JSON is ignored on exit 2 (one signaling mode per hook); matchers are case-sensitive; subagent-dispatch matchers match `Task|Agent` (verified naming drift); 10k-char cap on all injected strings.
-
----
-
-## 6. The Agent Roster
-
-fable-mode's four named-but-undefined roles become real native subagents (`plugin/agents/*.md`), plus the trivial tier. All wire-verified mechanics: frontmatter `model:`/`effort:` reach the API per-task within one session.
-
-| Agent | Frontmatter | Tools | Contract |
-|---|---|---|---|
-| `scout` | effort: high | Read-only (Read, Bash(read-only), WebFetch) | Question / Key Findings / Patterns / Recommendations, ≤500 words, scope tiers + termination criteria (convergence, sufficiency, 2 dry iterations) in the system prompt |
-| `counterexample-hunter` | effort: xhigh | Read + test-run | Given a hypothesis, try to break it; output failing case or "no break found" with what was tried |
-| `verifier` | effort: xhigh | Read + test-run | Fresh-context review of patch vs task.md + tests; never sees the implementation transcript |
-| `simplifier` | effort: high | Read-only | Flags unnecessary abstraction and scope drift against task.md |
-| `quick` | model: haiku (→ glm-5-turbo), thinking auto-off | Minimal | The trivial tier — cheapest lane by price and quota |
-
-Delegation economics invert Atreides' caution: forked exploration runs GLM-5.2 at 3.6–5.7× below Opus pricing, so Albion is *more* aggressive with parallel scouts. The main agent keeps working while subagents run (SKILL.md line 207), then reconciles.
-
-**Optional frontier lane:** for novel-architecture or security-critical review ("~6 months behind frontier" consensus), a separately-spawned `claude` CLI process (session-level binding makes in-session mixing impossible). Declared, optional, off by default.
-
----
-
-## 7. State & Memory Model
-
-Two systems with distinct masters, by design:
-
-| | Workbench (prose) | Session-state (JSON) |
+| Level | Mechanism | Covers |
 |---|---|---|
-| Written by | The model (fable-mode discipline) | **Hooks** (never the model) |
-| Read by | The model | Hooks (Stop gate, strike counter) + SessionStart re-injection |
-| Contents | task.md, state-map.md, hypotheses.md, evidence.md, verification.md, counterexamples.jsonl, lessons/ | sessionId, phase, per-operation strike counts, task states, last test/build result, tool history summary |
-| On disagreement | — | **JSON wins** (it is mechanically derived) |
+| **Helper CLI** | `albion-vision <image> <prompt>` — one-shot API call, returns text | Scripted checks, hooks, agents |
+| **Transparent interception** | The image-read hook (§5.6) — GLM "reads" images through borrowed eyes, no skill invocation needed | Screenshots, design references encountered mid-task |
+| **Interactive vision session** | Conductor-dispatched vision-capable agent (e.g., stock Claude Code) for multi-turn visual work | Iterative UI review, browsing screenshot sequences |
 
-Long-term memory: workbench `lessons/` (task-scoped, promoted deliberately) + native CLAUDE.md hierarchy with path-scoped `.claude/rules/`. The mem0/Cipher/Qdrant/Forge service chain is dropped entirely; if cross-session semantic memory proves necessary, it returns as **one declared MCP server** with a doctor-checkable health command. Auto-memory stays disabled initially (GLM note-generation quality unknown).
-
-Context economics: treat the 1M window as **headroom, not a working set** — aggressive scout summarization, workbench re-anchoring, compaction well before the extremes.
+Design rules: one-shot beats screen-scraping for single Q&A; provider choice is per-project config; every level degrades gracefully when unconfigured; provider variance is a documented caveat, not a hidden one.
 
 ---
 
-## 8. Telemetry & the Continuous Experiment
+## 7. The Conductor: Cross-Session Orchestration over tmux
 
-Both foundations are unvalidated (fable-mode has an A/B plan with no results; GLM benchmarks are self-reported). Albion resolves this by building the experiment into the product:
+A skill that works **in both stock Claude Code and Albion**, enabling a Fable-driven Claude Code session to orchestrate GLM-backed Albion workers — and Albion→Albion fan-out.
 
-- **Per-task telemetry** (from Milestone 2): the ab-test-plan.md metrics become permanent — ungrounded-claim count (Stop-gate heuristic hits), scope-drift flags (simplifier findings), counterexamples discovered, strikes, time-to-first-useful-patch, tokens by model (from `usage`/`modelUsage` — Claude Code's `total_cost_usd` is wrong under Z.ai and is ignored).
-- **Three-arm comparison** built into the launcher: `albion` vs `albion --vanilla` vs `claude` on the same task classes.
-- **Internal regression bench** (`bench/`): representative repo tasks with ground-truth checks, re-run on every model bump (Z.ai ships ~every 2 months and silently changes slot defaults) and per provider (quantized third-party hosts may silently degrade compliance behaviors).
+**Standalone-first principle (explicit):** Albion never requires the Conductor. It is an amplifier for people who have both subscriptions; the solo `albion` experience is the product.
+
+### 7.1 The economics
+
+Fable does architecture, judgment, and review — its strengths, at frontier prices, used sparingly. GLM-5.2 does volume implementation at ~1/5 the cost — its strength, used liberally. This matches the community consensus ("GLM covers ~90% of routine agentic coding, lags on novel architecture").
+
+### 7.2 The protocol: tmux for transport, files for signaling
+
+Screen-scraping `capture-pane` for completion detection is the fragile design. Albion's protocol is file-based — **the fable workbench is the wire format**:
+
+1. Conductor writes `task.md` (7-section delegation template) into a namespaced workbench.
+2. Conductor spawns: `tmux new-session -d -s albion-w1 'albion --task <workbench-path>'`.
+3. Worker runs the fable loop; the **Stop-gate hook writes a completion manifest** (JSON: status, evidence pointers, files changed) when — and only when — the gate passes. The enforcement layer doubles as the completion signal.
+4. Conductor polls the manifest (cheap, deterministic), then reads `verification.md`/`evidence.md` for the report.
+5. tmux stays **attachable** — the human can watch any worker live — but nothing parses the screen.
+
+**Baseline: fire-and-forget dispatch with review-on-completion.** Interactive steering (send-keys into a worker) ships later as an opt-in extension; the file protocol doesn't change.
+
+### 7.3 Why this design compounds
+
+- Dissolves the session-level model-binding tension: cross-model orchestration happens at the process level, where it belongs.
+- Harness-neutral: the file protocol has no Claude Code dependencies — it becomes the common bus for the Oakdale/Bower Lake ports (§10).
+- Same protocol serves the vision `external` provider and the optional frontier review lane.
 
 ---
 
-## 9. Cost Model & Plan Recommendation
+## 8. State, Memory & Telemetry
 
-Measured/derived (report [10](../research/reports/10-effort-routing-and-costs.md)):
+Unchanged in substance from v0.1:
 
-- Always-on prefix (tools JSON ~17.4k + system + charter + skill + workbench re-injection) ≈ **30–32k tokens** → ~$0.045 first pass, **~$0.008/turn cached** ($0.26/M cached input). On a Coding Plan this is quota-free (prompts are metered, not tokens).
-- Medium fable-mode task (30 tool calls + 4 subagents ≈ 55 model calls, ~2.3M input tokens ~93% cached, ~100k output): **≈ $1.20 API warm cache / $3.65 cold** ≈ **3 prompt-equivalents** (≈9 at peak 3×).
-- **Recommendation: GLM Coding Plan Lite ($18/mo, promo ~$12.60)** — ~80 prompts/5h ≈ 9 (peak) to 25+ (off-peak) medium tasks per window. Upgrade to Pro for parallel fan-out workloads, sustained peak-hour use (14:00–18:00 UTC+8), or >100 MCP calls/mo. Keep an API key as overflow.
-- The real cost hazards are **Stop-hook re-prompt loops** (each iteration is a full-context call and a prompt-equivalent — hence the hard cap of 4) and **cache breakage** (MCP churn, version bumps, mid-session effort flips).
+- **Workbench** (model-written prose) + **session-state JSON** (hook-written); JSON wins on disagreement; workbench namespaced per task, gitignored, hook-scaffolded, archived on completion.
+- Memory = workbench `lessons/` + native CLAUDE.md hierarchy + path-scoped rules. No undeclared service chains. Auto-memory off initially.
+- **Telemetry** (from M2): ungrounded-claim count, scope-drift flags, counterexamples discovered, strikes, time-to-first-useful-patch, tokens by model — reported against the **active auth lane's cost model** (prompt-equivalents on plan, dollars on API).
+- **Bench**: representative tasks with ground-truth checks; runs per model bump, per provider, and as the `albion` vs `albion --vanilla` A/B — finally answering fable-mode's open validation question.
 
 ---
 
-## 10. Roadmap
+## 9. Open Source & the Pristine Repo (MIT)
+
+The project's goal is adoption: people using it, forking it, and building on it. That makes packaging a first-class workstream, not an afterthought — and it must meet the bar for OSS-grant program submissions (e.g., OpenAI's OSS maintainer program).
+
+**Repo standards:**
+- `LICENSE` (MIT), `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR templates.
+- **CI that runs the recorded-payload hook tests** on every commit — "our enforcement layer is wire-tested" is the project's credibility story and the exact discipline Atreides lacked.
+- Semver releases with changelogs; commit-SHA-pinned plugin distribution.
+- README with architecture diagram, honest benchmark framing, and a **fresh-machine quickstart** (no assumptions of pre-existing GLM setups).
+- Raw research reports stay out of the public repo (machine-specific details); the synthesis analysis is the public research artifact.
+
+**Disclosure obligations (prominent, not buried):**
+- Data sovereignty: Z.ai first-party serving routes prompts/code through Chinese servers; the provider abstraction and its quantization-quality caveats are documented up front.
+- Cost honesty: Claude Code's cost display is wrong under Z.ai; Albion's telemetry is the source of truth.
+
+**Positioning:** multi-model, multi-harness orchestration infrastructure — not a single-vendor wrapper. The Oakdale/Bower Lake roadmap and the model-agnostic manifest make that claim concrete.
+
+---
+
+## 10. Portability Constraint: Oakdale (Opencode) & Bower Lake (Pi)
+
+A standing **design constraint** now, a workstream later:
+
+- The **manifest** (`albion-manifest.yaml`) gains a `target` dimension from day one: behavioral content (contract, loop, delegation template, rubric) is harness-agnostic; compile targets emit Claude Code plugin format now, Opencode and Pi formats later.
+- **Hook logic lives in portable scripts** (JSON on stdin → JSON/exit codes out); only thin per-harness adapters are non-portable.
+- **The Conductor file protocol is the common bus** — an Oakdale or Bower Lake worker that honors the workbench + completion-manifest contract is orchestratable by the same conductor on day one.
+
+What we do *not* do yet: build any Opencode/Pi adapter code.
+
+---
+
+## 11. Roadmap (v0.2)
 
 | Milestone | Deliverable | Exit criteria |
 |---|---|---|
-| **M0 — Verification** *(largely complete via research probes)* | Filled feature matrix under Z.ai | Remaining cells: cache-keying on effort (2 paired requests), subagent prompt-accounting, current Pro/Max pricing |
-| **M1 — Launcher + doctor** | `bin/albion`, `env/albion-env.sh`, `albion doctor` | Doctor passes on this machine; wrong-endpoint/model/version fail loudly; synthetic payloads pass through all hooks |
-| **M2 — Hooks + state engine** | Five hooks + session-state JSON + recorded-payload test suite | Stop gate demonstrably blocks a fake "done"; strike counter injects at 2; scrubber redacts a planted secret |
-| **M3 — Charter + skills + agents (plugin)** | ALBION.md <400 lines, fable-mode v2, 4 crown-jewel skills, 5 agents, plugin manifest | One-command install; gate invokes fable-mode by name on a long-horizon task end-to-end |
-| **M4 — Telemetry + bench** | Per-task metrics, three-arm A/B, regression bench | First A/B report: albion vs vanilla-GLM on 8–12 tasks (the ab-test-plan.md experiment, finally run) |
-| **M5 — Hardening** | Provider abstraction (data-sovereignty toggle), frontier review lane, lessons-promotion flow | Bench green across ≥2 providers or documented variance |
-
-Suggested cadence: M1–M2 are a week of focused work; M3 a second week; M4 runs continuously from M2 onward.
-
----
-
-## 11. Risks & Open Questions
-
-1. **Charter-size hypothesis** — <400 lines is a target, not a finding; GLM's compliance-vs-coverage curve bend is unmeasured. Mitigation: A/B compliance probes in the bench.
-2. **Gate misclassification** — if the intent gate misses "complex", fable-mode never engages (the always-on gate is the fallback for unreliable auto-triggering, but the gate itself can drift). Mitigation: user override (`/fable-mode` explicit invocation always works — verified), telemetry on gate decisions.
-3. **Z.ai ground movement** — silent slot remapping, bimonthly model bumps, promo-dependent pricing. Mitigation: doctor probe on startup + bench per bump.
-4. **Prompt-accounting ambiguity** — whether subagent spawns and Stop-hook turns draw down prompt quota is undocumented. Planning assumption: call-budget draw-down (~15–20 calls/prompt).
-5. **Quantized-provider variance** — behavior guarantees are validated on first-party serving only until the bench runs per-provider.
-6. **Hook semantic blindness** — a gamed gate (`touch verification.md`) passes mechanically. Mitigation: honesty stays a skill rule; gate checks recency/size heuristics, not just existence; verifier agent is the semantic layer.
-7. **Data sovereignty** — first-party Z.ai routes code through Chinese servers; this is a per-project decision the provider toggle must surface, not bury.
+| **M0 — Verification** *(largely complete)* | Feature matrix under Z.ai | Remaining: cache-keying on effort; subagent prompt-accounting; Coding-Plan-lane probe parity |
+| **M1 — Launcher + doctor** | `albion` / `--vanilla` / `--doctor`; both auth lanes | Doctor green on a fresh machine; loud failures on wrong endpoint/model/version |
+| **M2 — Hooks + state engine** | Six hooks + session-state + recorded-payload suite | Stop gate blocks a fake "done"; strike counter injects at 2; scrubber redacts a planted secret; image hook degrades gracefully |
+| **M3 — ALBION.md + skills + agents (plugin)** | Unified ~600-line operating system; crown-jewel skills; 5 agents; manifest→compile pipeline | Long-horizon task runs the full loop end-to-end solo; fable-mode also usable standalone in stock CC |
+| **M4 — Vision + Conductor** | Provider registry, `albion-vision`, image hook; conductor skill + completion-manifest protocol | Fable-CC session dispatches an Albion worker and reviews its manifest; image read transparently described via GLM-4.6V |
+| **M5 — Telemetry + bench** *(continuous from M2)* | Dual-cost-model telemetry; three-arm A/B; regression bench | First A/B report: albion vs vanilla-GLM on 8–12 tasks |
+| **M6 — OSS release 1.0** | Pristine repo: CI, community files, quickstart, disclosures, semver release | Fresh-machine install ≤5 minutes; CI green; grant-submission-ready |
+| **M7 — Hardening** | Provider abstraction (data-sovereignty toggle), interactive conductor steering, lessons promotion | Bench green across ≥2 providers or documented variance |
 
 ---
 
-## 12. What Success Looks Like
+## 12. Risks & Open Questions
 
-Six months in, Albion is judged by:
-
-- **Reliability:** ungrounded-claim rate and premature-completion rate near zero on instrumented tasks (the Stop gate makes the second structurally difficult).
-- **Throughput-per-dollar:** medium tasks at ~$0–marginal cost on Lite quota that would cost $5–15 on frontier API pricing.
-- **Survivability:** model bumps and CC version bumps produce bench diffs, not silent regressions.
-- **The experiment answered:** the first real data on whether fable-mode measurably improves GLM-5.2's long-horizon discipline — the question the skill's A/B plan asked and never answered.
+1. **Charter-size hypothesis** — ~600 always-on lines vs GLM's compliance curve; benched via A/B, adjustable at compile time.
+2. **Always-on discipline on trivial turns** — the contract's internal scaling rule ("no extra files for simple tasks") carries this; watch for over-ceremony in telemetry.
+3. **Z.ai ground movement** — silent slot remapping, bimonthly model bumps, promo-dependent pricing; doctor probe + bench per bump.
+4. **Plan-lane accounting ambiguity** — whether subagent spawns/Stop-hook turns draw prompt quota is undocumented; assume call-budget draw-down until measured.
+5. **Conductor fragility surface** — mitigated by file-based signaling (no screen-scraping) and fire-and-forget baseline; interactive steering deferred.
+6. **Vision provider variance** — different describers give different answers; provider is explicit per-project config, never silent.
+7. **Hook semantic blindness** — honesty stays a prompt rule; gates check state; the verifier agent is the semantic layer.
+8. **Data sovereignty** — surfaced per-project via the provider toggle and documented prominently.
 
 ---
 
-*Prepared by the Albion research mission. Next step: review this proposal, then move to planning (Milestone 1 breakdown).*
+## 13. What Success Looks Like
+
+- **Standalone strength:** a solo `albion` session is the best GLM-5.2 coding experience available — ungrounded-claim and premature-completion rates near zero on instrumented tasks.
+- **The price claim holds:** medium tasks effectively free on Lite quota that would cost $5–15 at frontier API prices, without sacrificing "too much" — and the bench quantifies exactly how much "too much" is.
+- **Adoption:** forks, plugin installs, standalone fable-mode adoption, and contributors who arrive via the pristine repo.
+- **The experiment answered:** the first real data on whether fable-mode measurably improves GLM-5.2's long-horizon discipline.
+
+---
+
+*v0.2 prepared 2026-07-04 following maintainer review. Next step: planning — Milestone 1 breakdown.*
