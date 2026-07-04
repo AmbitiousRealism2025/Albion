@@ -82,9 +82,11 @@ build_reason() {
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 workbench_root = Path(sys.argv[1])
@@ -99,16 +101,31 @@ if not isinstance(state, dict):
     state = {}
 
 
-def int_value(value: object, default: int = 0) -> int:
-    if isinstance(value, bool):
+def open_task_count(value: object, default: int = 0) -> int:
+    try:
+        if isinstance(value, bool):
+            return default
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            if math.isfinite(value) and value >= 1:
+                return int(value)
+            return default
+        if isinstance(value, str):
+            stripped = value.strip()
+            if re.fullmatch(r"[+-]?\d+", stripped):
+                return int(stripped, 10)
+    except (OverflowError, ValueError):
         return default
-    if isinstance(value, int):
-        return value
     return default
 
 
 def string_value(value: object) -> str:
     return value if isinstance(value, str) else ""
+
+
+def normalized_status(value: object) -> str:
+    return string_value(value).strip().lower()
 
 
 def task_is_nontrivial(task_text: str) -> bool:
@@ -120,9 +137,13 @@ def task_is_nontrivial(task_text: str) -> bool:
         r"(?m)^\s*trivial\s*:\s*true\s*$",
         r"(?m)^\s*non-?trivial\s*:\s*false\s*$",
         r"(?m)^\s*(complexity|tier)\s*:\s*trivial\s*$",
-        r"(?m)^\s*#\s*trivial\b",
     )
     return not any(re.search(pattern, lowered) for pattern in trivial_markers)
+
+
+def is_empty_verification(text: str) -> bool:
+    visible_text = "".join(ch for ch in text if unicodedata.category(ch) != "Cf")
+    return visible_text.strip() == ""
 
 
 def empty_verification_tasks(root: Path) -> list[str]:
@@ -145,16 +166,21 @@ def empty_verification_tasks(root: Path) -> list[str]:
             verification_text = verification_file.read_text(encoding="utf-8", errors="replace")
         except OSError:
             verification_text = ""
-        if verification_text.strip() == "":
+        if is_empty_verification(verification_text):
             missing.append(task_dir.name)
     return missing
 
 
 tasks = state.get("tasks")
-open_tasks = int_value(tasks.get("open") if isinstance(tasks, dict) else None)
+open_tasks = open_task_count(tasks.get("open") if isinstance(tasks, dict) else None)
 
 last_test = state.get("last_test")
-last_test_failed = isinstance(last_test, dict) and last_test.get("status") == "fail"
+last_test_failed = isinstance(last_test, dict) and normalized_status(last_test.get("status")) in {
+    "fail",
+    "failed",
+    "error",
+    "errored",
+}
 last_test_command = string_value(last_test.get("command") if isinstance(last_test, dict) else None)
 
 missing_verification = empty_verification_tasks(workbench_root)

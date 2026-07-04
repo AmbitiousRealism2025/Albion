@@ -157,6 +157,31 @@ make_workbench_task() {
   fi
 }
 
+write_invisible_verification() {
+  local verification_file
+  local kind
+  verification_file="$1"
+  kind="$2"
+
+  case "$kind" in
+    bom) printf '\357\273\277' >"$verification_file" ;;
+    zero-width) printf '\342\200\213' >"$verification_file" ;;
+    *) assert_fail "unknown invisible verification kind: $kind" ;;
+  esac
+}
+
+last_test_state_json() {
+  local status
+  status="$1"
+
+  python3 - "$status" <<'PY'
+import json
+import sys
+
+print(json.dumps({"command": "bash tests/run.sh", "status": sys.argv[1]}, separators=(",", ":")))
+PY
+}
+
 test_open_tasks_block_names_count() {
   local session_id
   local state_dir
@@ -173,6 +198,31 @@ test_open_tasks_block_names_count() {
   reason="$(block_reason "$RUN_STDOUT")"
   assert_contains "$reason" "2 open tasks" "open tasks reason names the count"
   assert_eq "1" "$(state_get "$state_dir" "$session_id" gate.blocks missing)" "block increments gate.blocks"
+}
+
+test_open_tasks_count_normalization_blocks() {
+  local value
+  local expected_count
+  local label
+  local session_id
+  local state_dir
+  local payload
+  local reason
+
+  for value in '"2"' '"02"' '2.0'; do
+    label="${value//[^[:alnum:]]/-}"
+    session_id="stop-open-normalized-${label}"
+    state_dir="${TMP_DIR}/open-normalized-${label}.state"
+    payload="$(payload_json "$session_id" false "Stopping now.")"
+    state_set "$state_dir" "$session_id" tasks.open "$value"
+
+    run_gate_in_state "open-normalized-${label}" "$payload" "$state_dir" "${TMP_DIR}/open-normalized-${label}.workbench"
+    assert_exit_code 0 "$RUN_CODE" "normalized open tasks ${value} exits zero"
+    assert_valid_block_json "$RUN_STDOUT"
+    reason="$(block_reason "$RUN_STDOUT")"
+    expected_count="2"
+    assert_contains "$reason" "${expected_count} open tasks" "normalized open tasks ${value} blocks with coerced count"
+  done
 }
 
 test_failed_last_test_block_names_command() {
@@ -192,6 +242,29 @@ test_failed_last_test_block_names_command() {
   assert_contains "$reason" "last test run failed: \`bash tests/run.sh\`" "failed test reason names the command"
 }
 
+test_failed_last_test_status_normalization_blocks() {
+  local status
+  local label
+  local session_id
+  local state_dir
+  local payload
+  local reason
+
+  for status in 'FAILED' 'Fail' 'error' 'fail '; do
+    label="${status//[^[:alnum:]]/-}"
+    session_id="stop-failed-normalized-${label}"
+    state_dir="${TMP_DIR}/failed-normalized-${label}.state"
+    payload="$(payload_json "$session_id" false "Tests are still being checked.")"
+    state_set "$state_dir" "$session_id" last_test "$(last_test_state_json "$status")"
+
+    run_gate_in_state "failed-normalized-${label}" "$payload" "$state_dir" "${TMP_DIR}/failed-normalized-${label}.workbench"
+    assert_exit_code 0 "$RUN_CODE" "normalized failed status ${status} exits zero"
+    assert_valid_block_json "$RUN_STDOUT"
+    reason="$(block_reason "$RUN_STDOUT")"
+    assert_contains "$reason" "last test run failed: \`bash tests/run.sh\`" "normalized failed status ${status} blocks"
+  done
+}
+
 test_empty_verification_on_nontrivial_workbench_task_blocks() {
   local session_id
   local state_dir
@@ -209,6 +282,67 @@ test_empty_verification_on_nontrivial_workbench_task_blocks() {
   assert_valid_block_json "$RUN_STDOUT"
   reason="$(block_reason "$RUN_STDOUT")"
   assert_contains "$reason" "verification.md missing or empty for workbench task \`active-task\`" "empty verification reason names the task"
+}
+
+test_invisible_only_verification_blocks() {
+  local kind
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  local verification_file
+  local reason
+
+  for kind in bom zero-width; do
+    session_id="stop-invisible-verification-${kind}"
+    state_dir="${TMP_DIR}/invisible-verification-${kind}.state"
+    workbench_root="${TMP_DIR}/invisible-verification-${kind}.workbench"
+    payload="$(payload_json "$session_id" false "The implementation is in progress.")"
+    make_workbench_task "$workbench_root" "invisible-${kind}" "Implement the hook." "placeholder"
+    verification_file="${workbench_root}/fable-mode/invisible-${kind}/verification.md"
+    write_invisible_verification "$verification_file" "$kind"
+
+    run_gate_in_state "invisible-verification-${kind}" "$payload" "$state_dir" "$workbench_root"
+    assert_exit_code 0 "$RUN_CODE" "invisible-only verification ${kind} exits zero"
+    assert_valid_block_json "$RUN_STDOUT"
+    reason="$(block_reason "$RUN_STDOUT")"
+    assert_contains "$reason" "verification.md missing or empty for workbench task \`invisible-${kind}\`" "invisible-only verification ${kind} blocks"
+  done
+}
+
+test_trivial_heading_no_longer_exempts_task() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  local reason
+  session_id="stop-trivial-heading"
+  state_dir="${TMP_DIR}/trivial-heading.state"
+  workbench_root="${TMP_DIR}/trivial-heading.workbench"
+  payload="$(payload_json "$session_id" false "The parser rewrite is in progress.")"
+  make_workbench_task "$workbench_root" parser-rewrite "# Trivial parser rewrite"
+
+  run_gate_in_state "trivial-heading" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "trivial heading task exits zero"
+  assert_valid_block_json "$RUN_STDOUT"
+  reason="$(block_reason "$RUN_STDOUT")"
+  assert_contains "$reason" "verification.md missing or empty for workbench task \`parser-rewrite\`" "trivial heading does not exempt nontrivial task"
+}
+
+test_structured_trivial_flag_still_exempts_task() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  session_id="stop-structured-trivial"
+  state_dir="${TMP_DIR}/structured-trivial.state"
+  workbench_root="${TMP_DIR}/structured-trivial.workbench"
+  payload="$(payload_json "$session_id" false "The task is intentionally trivial.")"
+  make_workbench_task "$workbench_root" trivial-task "trivial: true"
+
+  run_gate_in_state "structured-trivial" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "structured trivial task exits zero"
+  assert_eq "" "$RUN_STDOUT" "structured trivial task is exempted"
 }
 
 test_all_clear_allows_and_resets_counter() {
@@ -352,8 +486,13 @@ test_hook_script_exists() {
 
 test_hook_script_exists
 test_open_tasks_block_names_count
+test_open_tasks_count_normalization_blocks
 test_failed_last_test_block_names_command
+test_failed_last_test_status_normalization_blocks
 test_empty_verification_on_nontrivial_workbench_task_blocks
+test_invisible_only_verification_blocks
+test_trivial_heading_no_longer_exempts_task
+test_structured_trivial_flag_still_exempts_task
 test_all_clear_allows_and_resets_counter
 test_stop_hook_active_allows_soft_signal
 test_stop_hook_active_still_blocks_open_tasks
