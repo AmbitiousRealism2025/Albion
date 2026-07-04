@@ -140,10 +140,10 @@ test_state_usage_and_file_mode() {
 
 test_state_concurrent_increments() {
   local state_file
-  local index
+
   state_file="${TMP_DIR}/concurrent/session.json"
 
-  for index in $(seq 1 20); do
+  for _ in $(seq 1 20); do
     "$STATE_CLI" incr --file "$state_file" --key strikes.Bash >/dev/null &
   done
   wait
