@@ -3,7 +3,19 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${TMPDIR:-/tmp}/albion-test-doctor.$$"
-BASE_PATH="/usr/bin:/bin"
+PATH_FARM_TOOLS=(
+  bash
+  sh
+  python3
+  cat
+  dirname
+  readlink
+  mktemp
+  grep
+  sed
+  basename
+  rm
+)
 
 # shellcheck source=tests/lib/assert.sh
 . "${ROOT_DIR}/tests/lib/assert.sh"
@@ -35,11 +47,21 @@ make_claude_path() {
   local name
   local version
   local stub_dir
+  local tool
+  local tool_path
 
   name="$1"
   version="$2"
   stub_dir="${TMP_DIR}/${name}-bin"
   mkdir -p "$stub_dir"
+
+  for tool in "${PATH_FARM_TOOLS[@]}"; do
+    if ! tool_path="$(command -v "$tool")"; then
+      printf 'required test tool not found on host PATH: %s\n' "$tool" >&2
+      exit 1
+    fi
+    ln -s "$tool_path" "${stub_dir}/${tool}"
+  done
 
   cat >"${stub_dir}/claude" <<'STUB'
 #!/usr/bin/env bash
@@ -53,8 +75,38 @@ fi
 printf 'stub claude invoked\n'
 STUB
   chmod +x "${stub_dir}/claude"
-  printf '%s:%s\n' "$stub_dir" "$BASE_PATH"
+  printf '%s\n' "$stub_dir"
   printf '%s\n' "$version" >"${stub_dir}/version"
+}
+
+copy_path_with_tmux() {
+  local source_dir
+  local name
+  local tmux_dir
+  local entry
+  local entry_name
+  local target
+
+  source_dir="$1"
+  name="$2"
+  tmux_dir="${TMP_DIR}/${name}-bin"
+  mkdir -p "$tmux_dir"
+
+  for entry in "$source_dir"/*; do
+    entry_name="$(basename "$entry")"
+    if target="$(readlink "$entry")" && [ -n "$target" ] && [ -e "$target" ]; then
+      ln -s "$target" "${tmux_dir}/${entry_name}"
+    else
+      ln -s "$entry" "${tmux_dir}/${entry_name}"
+    fi
+  done
+
+  cat >"${tmux_dir}/tmux" <<'STUB'
+#!/usr/bin/env bash
+printf 'tmux stub\n'
+STUB
+  chmod +x "${tmux_dir}/tmux"
+  printf '%s\n' "$tmux_dir"
 }
 
 make_curl_stub() {
@@ -171,9 +223,18 @@ assert_contains "$RUN_STDOUT" "PASS claude-version: Claude Code 2.1.200" "prefer
 assert_contains "$RUN_STDOUT" "5 pass, 0 fail, 1 warn, 1 skip" "version pass summary counts"
 assert_contains "$RUN_STDOUT" "PASS env: lane=plan token=***set***" "env check masks token state"
 assert_contains "$RUN_STDOUT" "PASS endpoint-shape: https://api.z.ai/api/anthropic" "endpoint shape pass is reported"
+assert_contains "$RUN_STDOUT" "WARN tmux: tmux not found on PATH; conductor features unavailable" "tmux absence warning is deterministic"
 assert_contains "$RUN_STDOUT" "SKIP hook-suite: not installed (arrives in M2)" "hook suite stub is reported"
 assert_not_contains "$RUN_STDOUT" "test-token" "offline output never prints the token"
 assert_not_contains "$RUN_STDERR" "test-token" "offline stderr never prints the token"
+
+stub_path_200_tmux="$(copy_path_with_tmux "$stub_path_200" version-pass-tmux)"
+RUN_PATH="$stub_path_200_tmux"
+RUN_ENV=("ALBION_ZAI_TOKEN=test-token" "CLAUDE_STUB_VERSION=$(cat "${TMP_DIR}/version-pass-bin/version")")
+run_doctor "version-pass-tmux" --offline
+assert_exit_code 0 "$RUN_CODE" "Claude Code 2.1.200 passes when tmux is present"
+assert_contains "$RUN_STDOUT" "PASS tmux: ${stub_path_200_tmux}/tmux" "tmux presence pass is deterministic"
+assert_contains "$RUN_STDOUT" "6 pass, 0 fail, 0 warn, 1 skip" "tmux presence summary counts"
 
 RUN_PATH="$stub_path_200"
 RUN_ENV=(
