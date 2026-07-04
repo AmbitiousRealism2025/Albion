@@ -1,0 +1,56 @@
+# How Albion Is Built: Multi-Model Orchestration
+
+Albion is not only *about* orchestration — it is **built by it**. The build process is itself a working demonstration of the pattern Albion ships: a frontier model acting as conductor, dispatching well-specified work packets to a different coding model in a different coding environment, with file-based signaling, mechanical verification, and a human maintainer above both.
+
+This document specifies the methodology. The per-milestone journal lives in [`log/`](log/).
+
+## Why build it this way
+
+1. **The subject must not be the builder.** GLM-5.2 is the model under test in this project. Building Albion *with* GLM would confound every observation — "is this bug the code or the coder?" The implementation lane therefore uses a different model entirely.
+2. **Model diversity catches monoculture bugs.** The conductor (Anthropic Claude, Fable 5) and the implementation lane (OpenAI GPT-5.5 via Codex CLI) have non-overlapping blind spots; the maintainer arbitrates.
+3. **Dogfooding the Conductor.** Albion's Conductor skill (proposal §7) prescribes exactly this topology — frontier judgment dispatching volume implementation over tmux with file-based completion signaling. Every friction point in the build feeds the skill's design before it ships.
+4. **The pattern is the point.** Orchestrating across vendors' coding CLIs — Claude Code, Codex CLI, and later Opencode and Pi — is a capability many people want and few have documented end-to-end. This build is the worked example.
+
+## Roles
+
+| Role | Who | Responsibilities |
+|---|---|---|
+| **Maintainer** | AmbitiousRealism2025 | Direction, review of packet plans, final authority on scope and merges |
+| **Conductor** | Claude (Fable 5) in Claude Code | Architecture, task decomposition into work packets, dispatch, fresh-context diff review against briefs, integration, git hygiene, build log |
+| **Implementation lane** | GPT-5.5 (high reasoning) via `codex exec` | Executes work packets: code + tests, headless, workspace-sandboxed |
+| **Test subject** | GLM-5.2 via Z.ai | Never builds; runs Albion sessions as experiment subjects (bench, A/B) |
+
+## The protocol
+
+1. **Brief.** The conductor writes each task as a work packet using the 7-section delegation template (TASK / EXPECTED OUTCOME / CONTEXT / MUST DO / MUST NOT DO / TOOLS ALLOWED / SUCCESS CRITERIA) into `.albion/handoff/<packet-id>/task.md`. Every brief references the repo's conventions file so style stays coherent across workers.
+2. **Dispatch.** The packet runs in a tmux window for observability, headlessly:
+   `codex exec` scoped to the repo (`-C`), workspace-write sandbox, final message written to `.albion/handoff/<packet-id>/last-message.md`. Process exit is the completion signal — no screen-scraping.
+3. **Verify.** The conductor reviews `git diff` against the brief and runs the packet's SUCCESS CRITERIA tests. Acceptance is mechanical where possible (the packet's tests), semantic where necessary (conductor review).
+4. **Integrate.** The conductor owns commits; workers produce diffs. Rework goes back as a revised brief, not an edit war.
+5. **Log.** Each packet's outcome is journaled (see metrics below).
+
+### Guardrails
+
+- Workers never run with filesystem access beyond the repo workspace.
+- Honor-system completion claims are worthless (the core research finding of this project); acceptance requires fresh tool evidence — tests run by the conductor, not asserted by the worker.
+- The conductor never merges its own architecture unreviewed either: milestone plans are approved by the maintainer before dispatch.
+
+## Metrics (accumulated in the build log)
+
+| Metric | Why it matters |
+|---|---|
+| Packets dispatched / accepted first-pass | Delegation quality signal |
+| Review findings per packet (by severity) | What the conductor's review layer actually catches |
+| Rework cycles per packet | Brief clarity signal |
+| Wall-clock per packet, conductor-time vs worker-time | The economics of the pattern |
+| Cost/credits by lane (Anthropic / OpenAI / Z.ai) | Honest accounting of what multi-model building costs |
+
+These numbers are published as-is, including failures. The credibility of this document depends on it.
+
+## Reusing this pattern
+
+Nothing here is Albion-specific: any project can run a frontier conductor over `codex exec` (or any headless coding CLI) with the same brief format, tmux-for-observability / files-for-signaling transport, and mechanical acceptance gates. When Albion's Conductor skill ships, it packages this protocol; until then, this document plus the build log is the reference implementation.
+
+---
+
+*Methodology adopted 2026-07-04. See [`log/000-methodology.md`](log/000-methodology.md).*

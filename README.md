@@ -33,6 +33,12 @@ The organizing principle: **GLM-5.2 inverts the enforcement equation.** Claude t
 
 **The Conductor:** a skill that works in both stock Claude Code and Albion — a Fable-driven Claude Code session orchestrates GLM-backed Albion workers over tmux (files for signaling, tmux for transport and live observability). Frontier judgment where it counts, GLM volume where it's cheap. Albion never *requires* it: standalone strength is the product.
 
+## How Albion is built
+
+Albion is built by the same pattern it ships. A frontier conductor — **Claude (Fable 5) in Claude Code** — decomposes milestones into reviewable work packets and dispatches them to **GPT-5.5 (high reasoning) via OpenAI's Codex CLI** (`codex exec`) in tmux, with file-based completion signaling and mechanical acceptance tests before every merge. GLM-5.2 never builds: it is the test subject, and building with it would confound the project's own experiments.
+
+The methodology and an honestly-metered build journal (acceptance rates, review findings, rework cycles, cost per lane — failures included) live in [`docs/build/`](docs/build/orchestration.md). Beyond producing Albion, it's intended as a reusable, documented demonstration of orchestrating a frontier model across other vendors' coding CLIs.
+
 ## Key research findings
 
 - Atreides' hook enforcement layer was **silently inert** (wrong input contract and exit codes vs the real Claude Code hook interface).

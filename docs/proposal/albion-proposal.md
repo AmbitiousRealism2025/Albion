@@ -5,7 +5,7 @@
 **Basis:** [Deep research analysis](../research/atreides-analysis.md) — 11-agent research mission over the Atreides repo, DeepWiki, the fable-mode-glm-5-2 skill, GLM-5.2's live documentation, and wire-level probes against the Z.ai endpoint.
 **Companion:** [Visual companion (HTML)](albion-companion.html)
 
-**Changes in v0.2** (post-review direction from the maintainer): fable-mode is now **baked into a unified ALBION.md** rather than gated behind skill invocation; a **pluggable vision subsystem** is added; a **Conductor** skill (stock Claude Code ↔ Albion orchestration over tmux) is promoted to a first-class deliverable; the project is **MIT open-source** with a pristine-repo/OSS milestone; both **Z.ai API and Coding Plan** auth lanes are supported; portability to Opencode ("Oakdale") and Pi ("Bower Lake") becomes a standing design constraint.
+**Changes in v0.2** (post-review direction from the maintainer): fable-mode is now **baked into a unified ALBION.md** rather than gated behind skill invocation; a **pluggable vision subsystem** is added; a **Conductor** skill (stock Claude Code ↔ Albion orchestration over tmux) is promoted to a first-class deliverable; the project is **MIT open-source** with a pristine-repo/OSS milestone; both **Z.ai API and Coding Plan** auth lanes are supported; portability to Opencode ("Oakdale") and Pi ("Bower Lake") becomes a standing design constraint. Additionally, the **build process is itself orchestrated and documented** (§9.1): a Claude (Fable 5) conductor dispatching work packets to GPT-5.5 via `codex exec`, journaled in [`docs/build/`](../build/orchestration.md).
 
 ---
 
@@ -294,6 +294,12 @@ The project's goal is adoption: people using it, forking it, and building on it.
 - Cost honesty: Claude Code's cost display is wrong under Z.ai; Albion's telemetry is the source of truth.
 
 **Positioning:** multi-model, multi-harness orchestration infrastructure — not a single-vendor wrapper. The Oakdale/Bower Lake roadmap and the model-agnostic manifest make that claim concrete.
+
+### 9.1 Built in the open, by orchestration
+
+The build process is itself a deliverable: Albion is implemented by the same topology it ships — a frontier conductor (Claude, Fable 5) decomposing milestones into 7-section work packets and dispatching them to **GPT-5.5 (high reasoning) via `codex exec`** in tmux, with file-based completion signaling, mechanical acceptance tests, and conductor diff-review before every merge. GLM-5.2 is deliberately excluded from building — it is the test subject, and building with it would confound the project's own experiments.
+
+The methodology and an honestly-metered build log (packets dispatched, first-pass acceptance rate, review findings, rework cycles, cost per lane — failures included) live in [`docs/build/`](../build/orchestration.md). This serves three audiences at once: OSS-grant reviewers at OpenAI (genuine, measured Codex/GPT-5.5 usage) and Anthropic (a working demonstration of Claude as a cross-vendor orchestrator), and the community (a reusable, documented pattern for running a frontier conductor over heterogeneous coding CLIs).
 
 ---
 
