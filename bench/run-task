@@ -168,7 +168,7 @@ def run_launcher(args: Args, workspace: Path, result_path: Path) -> None:
 
 def run_verify(task_dir: Path, workspace: Path, out_dir: Path) -> int:
     with (out_dir / "verify.stdout").open("wb") as stdout_file, (out_dir / "verify.stderr").open("wb") as stderr_file:
-        result = subprocess.run([str(task_dir / "verify.sh")], cwd=workspace, stdout=stdout_file, stderr=stderr_file, check=False)
+        result = subprocess.run(["bash", str(task_dir / "verify.sh")], cwd=workspace, stdout=stdout_file, stderr=stderr_file, check=False)
     return result.returncode
 
 
@@ -225,7 +225,7 @@ def main() -> int:
     args.out_dir.mkdir()
     workspace = args.out_dir / "workspace"
     workspace.mkdir()
-    run_checked([str(args.task_dir / "setup.sh")], workspace, args.out_dir / "setup.stderr")
+    run_checked(["bash", str(args.task_dir / "setup.sh")], workspace, args.out_dir / "setup.stderr")
     run_launcher(args, workspace, args.out_dir / "result.json")
     verify_exit = run_verify(args.task_dir, workspace, args.out_dir)
     write_run_record(args, workspace, started_at, started, verify_exit)

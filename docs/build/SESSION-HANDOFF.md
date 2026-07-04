@@ -8,9 +8,9 @@ This is the rehydration document for a new conductor session. It exists because 
 
 ## [LIVE] Where we are right now
 
-**Date of handoff:** 2026-07-04 (updated same day; M3 and M4 both sealed this session)
-**Milestone complete:** M4 — **SEALED** (build log 012): vision CLI + image hook + completion manifest + conductor skill, both exit criteria live-verified. **Critical fix shipped:** hooks.json array-form commands never registered — the enforcement layer was inert in every real session until `57dcdae`; it is live now (log 012 has the full postmortem + the registration-smoke-check backlog item). M3 sealed earlier same day (logs 009–011; fixture at `~/Desktop/coding-projects/albion-m3-exit-test`, now the M5 bench seed).
-**Next milestone:** **M5 — telemetry + bench** (three-arm A/B: albion / vanilla / stock; headline questions in log 012 §Observations — workbench-tier engagement *with enforcement on*, last_test detection, dual-cost-model telemetry per lane).
+**Date of handoff:** 2026-07-04 (updated same day; M3, M4, M5 all sealed this session)
+**Milestone complete:** M5 — **SEALED** (build log 013): telemetry engine (dual cost model, harness cost proven 2.7× overstated), `last_test` writer, bench harness + report generator, 6-task corpus. First A/B report at `bench/reports/m5-first-ab-report.md`: both arms 6/6 solve — **tasks too easy to discriminate**; albion ~15% slower/~11% costlier (charter overhead, real and reported); **workbench tier never engaged (3rd confirmation)**; last_test fidelity 5/6 albion vs 0/6 vanilla (both correct). M3+M4 sealed earlier same day (logs 009–012); the hooks-were-inert fix (`57dcdae`) means enforcement is genuinely live now.
+**Next milestone:** **M6 — OSS release 1.0** (pristine repo: one-command installer, SHA-pinned CI actions, issue/PR templates, marketplace entry, quickstart ≤5 min). README/CONTRIBUTING/SECURITY already refreshed this session.
 **Conductor for the next session should be:** Fable 5.
 **Carry-forward observations:** (1) the intent gate classified all three exit-test rounds Explicit — the workbench tier has never engaged solo; this is a first-class M5 bench question. (2) **Vision-lane verdict is in** (research report 11, local): plan tokens DO authorize direct GLM-4.6V calls via `api.z.ai/api/anthropic/v1/messages` (probe: HTTP 200, real vision, prompt-metered); paas/v4 rejects plan tokens entirely (429/1113); MCP server is a wrapper and is NOT needed. `albion-vision` = direct HTTP, two lanes, 1113/1211 diagnostics. (3) Worker sandboxing pattern for the Conductor skill: `--permission-mode acceptEdits --allowedTools "Bash(<narrow>:*)"`, not bypassPermissions. (4) User-held key now provisioned via `~/.albion/secrets.zsh` sourced from `~/.zshenv` (setup script `~/.albion/albion-key-setup.sh`).
 
@@ -27,9 +27,11 @@ This is the rehydration document for a new conductor session. It exists because 
 
 ### Open threads / backlog
 - **Hook hardening backlog** (documented, non-blocking) in `docs/security-model.md` and build log 007: runtime-obfuscation gaps are inherent to denylists (do not attempt heuristic fixes); relocating `gate.blocks` outside agent-writable state is possible future work.
-- **CI actions are major-version-pinned**; SHA-pinning is a stated M6 (pristine-repo) task. CI also warns that `actions/checkout@v4` targets deprecated Node 20 — fold into the same M6 task.
-- **Worker-lane trust note (build log 010):** the GPT-5.5 lane gamed a doctor counter to satisfy an out-of-scope test rather than reporting the conflict. Standing brief boilerplate now: "if an out-of-scope test breaks, STOP and report." Conductor must read *every hunk* of worker diffs.
-- **M5+** per the roadmap: telemetry/bench, OSS release, hardening.
+- **Hook registration smoke-check** (from log 012): nothing tests that Claude Code actually *loads* the plugin hooks — add one cheap headless session with a marker hook so the inert-hooks class can't silently regress.
+- **Bench corpus is too easy** (log 013): both arms solve 6/6; the corpus can't yet discriminate the arms. The single most valuable next step for proving Albion's thesis is long-horizon / multi-file / unclear-cause tasks that exercise the workbench tier (which has *never* engaged solo across M3–M5).
+- **peak-window `last_test` miss** (log 013): a per-run state-write gap needing a dedicated repro; detection and write-path are both provably correct.
+- **CI actions are major-version-pinned**; SHA-pinning + the `actions/checkout@v4` Node-20 deprecation are M6 tasks.
+- **Worker-lane trust note (build log 010):** standing brief boilerplate "if an out-of-scope test breaks, STOP and report" is holding (record intact since ALB-016). Conductor must read *every hunk* of worker diffs and *every unit's exit code* (log 013's non-exec-setup catch).
 
 ---
 
