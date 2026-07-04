@@ -16,9 +16,11 @@ This document specifies the methodology. The per-milestone journal lives in [`lo
 | Role | Who | Responsibilities |
 |---|---|---|
 | **Maintainer** | AmbitiousRealism2025 | Direction, review of packet plans, final authority on scope and merges |
-| **Conductor** | Claude (Fable 5) in Claude Code | Architecture, task decomposition into work packets, dispatch, fresh-context diff review against briefs, integration, git hygiene, build log |
+| **Conductor** | Claude (Fable 5, later Opus 4.8) in Claude Code | Architecture, task decomposition into work packets, dispatch, fresh-context diff review against briefs, integration, git hygiene, build log |
 | **Implementation lane** | GPT-5.5 (high reasoning) via `codex exec` | Executes work packets: code + tests, headless, workspace-sandboxed |
 | **Test subject** | GLM-5.2 via Z.ai | Never builds; runs Albion sessions as experiment subjects (bench, A/B) |
+
+**A note on the conductor model.** The conductor ran on Claude Fable 5 through Milestone 0, Milestone 1, and most of Milestone 2. Partway through the Milestone 2 enforcement layer, a Fable-tier dual-use safeguard flagged the security-tooling content (the secrets scrubber and destructive-command guard necessarily contain the credential and attack patterns they defend against) and the session continued on Claude Opus 4.8. This is recorded plainly because the build log's value is its honesty: the security-dense milestones are a natural fit for Opus, and the reasoning- and design-heavy milestones (the charter and skills) are where the Fable tier earns its place. The methodology — a frontier Claude conducting GPT-5.5 workers with mechanical gates — is unchanged by which Claude tier holds the baton.
 
 ## The protocol
 
