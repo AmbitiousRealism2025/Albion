@@ -9,9 +9,10 @@ This is the rehydration document for a new conductor session. It exists because 
 ## [LIVE] Where we are right now
 
 **Date of handoff:** 2026-07-04 (updated same day, M3 session)
-**Milestone complete:** M3 — code-complete, CI-green (build logs 009–010). **The M3 seal awaits one thing:** the live-lane exit test (below).
-**Next milestone:** **M4 — vision subsystem + Conductor skill** (after the M3 exit test).
+**Milestone complete:** M3 — **SEALED** (build logs 009–011): code CI-green, live exit test passed in three escalating rounds (log 011; fixture preserved at `~/Desktop/coding-projects/albion-m3-exit-test` for the M5 bench corpus).
+**Next milestone:** **M4 — vision subsystem + Conductor skill.**
 **Conductor for the next session should be:** Fable 5.
+**Carry-forward observations:** (1) the intent gate classified all three exit-test rounds Explicit — the workbench tier has never engaged solo; this is a first-class M5 bench question. (2) Vision-lane decision pending a probe verdict on whether Coding Plan tokens authorize direct GLM-4.6V calls; maintainer has locked: the `albion-vision` CLI ships regardless, MCP (if needed) is a backend transport inside the CLI, never a session-visible tool. (3) Worker sandboxing pattern for the Conductor skill: `--permission-mode acceptEdits --allowedTools "Bash(<narrow>:*)"`, not bypassPermissions. (4) User-held key now provisioned via `~/.albion/secrets.zsh` sourced from `~/.zshenv` (setup script `~/.albion/albion-key-setup.sh`).
 
 ### What is done and merged (all CI-green, on `main`)
 - **M0** research + proposal (v0.2), including live wire-probes against the Z.ai endpoint.
