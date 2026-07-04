@@ -69,11 +69,19 @@ print(json.dumps({
 PY
 }
 
-decode_escapes() {
+decode_numeric_escapes() {
   local input
   input="$1"
 
-  printf '%b' "$input"
+  ALBION_GUARD_TEXT="$input" python3 -c '
+import os
+import re
+
+text = os.environ["ALBION_GUARD_TEXT"]
+text = re.sub(r"\\x([0-9A-Fa-f]{2})", lambda match: chr(int(match.group(1), 16)), text)
+text = re.sub(r"\\([0-7]{3})", lambda match: chr(int(match.group(1), 8)), text)
+print(text, end="")
+'
 }
 
 normalize_command() {
@@ -82,20 +90,16 @@ normalize_command() {
 
   cmd=$(printf '%s' "$cmd" | sed "s/\\\$'\\([^']*\\)'/\\1/g")
   cmd=$(printf '%s' "$cmd" | sed 's/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')
-  cmd=$(decode_escapes "$cmd")
+  cmd=$(decode_numeric_escapes "$cmd")
   cmd=$(printf '%s' "$cmd" | tr '\r\n\t' '   ')
   cmd=$(printf '%s' "$cmd" | tr -d '\000-\010\013\014\016-\037\177')
   cmd=$(printf '%s' "$cmd" | tr -s '[:space:]' ' ')
   cmd=$(printf '%s' "$cmd" | sed 's/\\[[:space:]]*$//g; s/\\[[:space:]]\+/ /g')
   cmd=$(printf '%s' "$cmd" | sed 's/\\//g')
-  cmd=$(printf '%s' "$cmd" | sed 's/\\x\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g')
-  cmd=$(decode_escapes "$cmd")
-  cmd=$(printf '%s' "$cmd" | sed 's/\\\([0-7][0-7][0-7]\)/\\0\1/g')
-  cmd=$(decode_escapes "$cmd")
   cmd=$(printf '%s' "$cmd" | sed "s/'\([^']*\)'/\1/g")
   cmd=$(printf '%s' "$cmd" | sed 's/"\([^"]*\)"/\1/g')
   cmd=$(printf '%s' "$cmd" | sed "s/\\\$'\\\\x\([0-9A-Fa-f][0-9A-Fa-f]\)'/\\\\x\1/g")
-  cmd=$(decode_escapes "$cmd")
+  cmd=$(decode_numeric_escapes "$cmd")
   cmd=$(printf '%s' "$cmd" | tr -s '[:space:]' ' ')
 
   printf '%s' "$cmd"
@@ -118,10 +122,15 @@ lowercase() {
 }
 
 contains_fork_bomb() {
-  local compact
-  compact=$(printf '%s' "$1" | tr -d '[:space:]')
+  ALBION_GUARD_TEXT="$1" python3 -c '
+import os
+import re
+import sys
 
-  [[ "$compact" == *':(){:|:&};:'* ]]
+compact = re.sub(r"\s+", "", os.environ["ALBION_GUARD_TEXT"])
+pattern = r"(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*|:)\(\)\{\1\|\1&\};\1(?![A-Za-z0-9_])"
+sys.exit(0 if re.search(pattern, compact) else 1)
+'
 }
 
 match_rm_root() {
@@ -134,10 +143,10 @@ match_rm_root() {
   local regex
   cmd="$1"
   command_start='(^|[;&|()])[[:space:]]*'
-  wrapper='((command|builtin)[[:space:]]+)*'
+  wrapper='((command|builtin)[[:space:]]+|env([[:space:]]+(-[^[:space:];&|]+|[A-Za-z_][A-Za-z0-9_]*=[^[:space:];&|]+))*[[:space:]]+|timeout([[:space:]]+-[^[:space:];&|]+)*[[:space:]]+[^[:space:];&|]+[[:space:]]+|nohup[[:space:]]+|nice([[:space:]]+(-[^[:space:];&|]+|[+-]?[0-9]+))*[[:space:]]+|setsid([[:space:]]+-[^[:space:];&|]+)*[[:space:]]+|stdbuf([[:space:]]+-[^[:space:];&|]+([[:space:]]+[^[:space:];&|]+)?)*[[:space:]]+)*'
   rm_cmd="${wrapper}((/usr)?/s?bin/)?rm"
   rm_flags='(-[^[:space:];&|]*r[^[:space:];&|]*f[^[:space:];&|]*|-[^[:space:];&|]*f[^[:space:];&|]*r[^[:space:];&|]*|-r[[:space:]]+-f|-f[[:space:]]+-r|--recursive[[:space:]]+--force|--force[[:space:]]+--recursive)'
-  root_target='(/|//+|/[*]+|/[.]/?|/[.][.]/?|~|[$]home)'
+  root_target='(/|//+|/[*]+|/[.]/?|/[.][.]/?|~|[$]home|/(etc|home|usr|var)(/?|/[*]+))'
   regex="${command_start}${rm_cmd}[[:space:]]+${rm_flags}([[:space:]]+--)?([[:space:]]+[^[:space:];&|]+)*[[:space:]]+${root_target}([[:space:];&|]|$)"
 
   [[ "$cmd" =~ $regex ]]
@@ -172,10 +181,19 @@ match_dd_device_write() {
 
 match_pipe_to_shell() {
   local cmd
+  local download
   local regex
+  local shell_stage
+  local tee_stage
   cmd="$1"
-  regex='(^|[;&|()])[[:space:]]*((command|builtin)[[:space:]]+|((/usr)?/bin/))*(curl|wget)[^|]*[|][[:space:]]*((command|builtin)[[:space:]]+|((/usr)?/bin/))*(bash|sh)([[:space:];&|]|$)'
+  download='(^|[;&|()])[[:space:]]*((command|builtin)[[:space:]]+|((/usr)?/bin/))*(curl|wget)[^|]*'
+  shell_stage='[|](&)?[[:space:]]*((sudo|command|builtin)[[:space:]]+|((/usr)?/bin/))*(bash|sh)([[:space:];&|]|$)'
+  tee_stage='[|](&)?[[:space:]]*((sudo|command|builtin)[[:space:]]+|((/usr)?/bin/))*tee[^|]*'
+  regex="${download}${shell_stage}"
 
+  [[ "$cmd" =~ $regex ]] && return 0
+
+  regex="${download}${tee_stage}${shell_stage}"
   [[ "$cmd" =~ $regex ]]
 }
 
@@ -184,8 +202,12 @@ match_git_force_protected() {
   cmd="$1"
 
   [[ "$cmd" =~ (^|[\;\&\|\(\)])[[:space:]]*((command|builtin)[[:space:]]+)*git[[:space:]]+push([[:space:]][^\;\&\|]*)? ]] || return 1
-  [[ "$cmd" =~ (^|[[:space:]])(--force|-f)([[:space:]]|$) ]] || return 1
-  [[ "$cmd" =~ (^|[[:space:]/:])((refs/heads/)?(main|master))([[:space:];&|:]|$) ]]
+  if [[ "$cmd" =~ (^|[[:space:]])(--force|-f)([[:space:]]|$) ]]; then
+    [[ "$cmd" =~ (^|[[:space:]/:])((refs/heads/)?(main|master))([[:space:];&|:]|$) ]]
+    return
+  fi
+
+  [[ "$cmd" =~ (^|[[:space:]])[+]((refs/heads/)?(main|master))([[:space:];&|:]|$) ]]
 }
 
 match_chmod_root() {
@@ -203,8 +225,24 @@ match_eval_command_substitution() {
   local cmd
   local regex
   cmd="$1"
-  regex='(^|[;&|()])[[:space:]]*((command|builtin)[[:space:]]+)*eval[[:space:]]+[$][(]'
+  regex='(^|[;&|()])[[:space:]]*((command|builtin)[[:space:]]+)*eval[[:space:]]+([$][(]|`)'
 
+  [[ "$cmd" =~ $regex ]]
+}
+
+match_find_system_delete() {
+  local cmd
+  local find_cmd
+  local root_target
+  local regex
+  cmd="$1"
+  find_cmd='(^|[;&|()])[[:space:]]*((command|builtin|sudo)[[:space:]]+|((/usr)?/bin/))*find[[:space:]]+'
+  root_target='(/|//+|/[*]+|/[.]/?|/[.][.]/?|~|[$]home|/(etc|home|usr|var)(/?|/[*]+))'
+
+  regex="${find_cmd}${root_target}([[:space:]]+[^;&|]*)?[[:space:]]+-delete([[:space:];&|]|$)"
+  [[ "$cmd" =~ $regex ]] && return 0
+
+  regex="${find_cmd}${root_target}([[:space:]]+[^;&|]*)?[[:space:]]+-exec[[:space:]]+((command|builtin|sudo)[[:space:]]+|((/usr)?/s?bin/))*rm([[:space:];&|]|[[:space:]]|$)"
   [[ "$cmd" =~ $regex ]]
 }
 
@@ -256,6 +294,11 @@ find_denial() {
 
   if match_eval_command_substitution "$normalized_lower"; then
     DENY_REASON="blocked: \`eval\` of command substitution can execute generated shell code; inspect the generated command first"
+    return 0
+  fi
+
+  if match_find_system_delete "$normalized_lower"; then
+    DENY_REASON="blocked: \`find\` deleting from filesystem root or top-level system directories; scope the path to the workspace"
     return 0
   fi
 
