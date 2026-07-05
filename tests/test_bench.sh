@@ -172,6 +172,7 @@ assert record["verify_exit"] != 0
 assert record["manifest"] is None
 ' "${out_dir}/run-record.json"
   assert_contains "$(cat "${out_dir}/workspace/.stub-args")" "--vanilla" "vanilla arm is passed to launcher"
+  assert_contains "$(cat "${out_dir}/workspace/.stub-args")" "--disable-slash-commands" "vanilla arm is a true-bare control (no auto-loaded skills)"
   assert_contains "$(cat "${out_dir}/workspace/.stub-args")" "--allowedTools Bash(python3:*)" "allowed tools are passed to launcher"
 }
 
@@ -217,6 +218,7 @@ test_seed_tasks_start_red() {
   assert_seed_prefails ledger-cache
   assert_seed_prefails csv-dedup
   assert_seed_prefails peak-window
+  assert_seed_prefails retry-idempotency
 }
 
 test_ledger_oracle_rejects_test_tampering() {
