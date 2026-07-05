@@ -9,7 +9,7 @@ This is the rehydration document for a new conductor session. It exists because 
 ## [LIVE] Where we are right now
 
 **Date of handoff:** 2026-07-05. **The system is built.** M0–M5 are sealed; M6 (release engineering) is complete except the plugin-marketplace **publish**, which is externally gated on the maintainer's account. Everything below is on `main`, CI-green, **28 test files** passing on macOS + ubuntu.
-**Conductor for the next session:** Fable 5.
+**Conductor for the next session:** Fable 5 — **but VERIFY the live model every session** (statusline shows it): Fable's safeguard silently fell back to Opus 4.8 at the M3→M4 boundary and it went unnoticed for ~15.5h; M4–M6 were actually Opus-conducted (build log 017, post-M6 audit: directionally sound, deny floor wired as the one real fix).
 
 ### Full inventory of what is built & merged (all CI-green)
 - **Launcher** `bin/albion` — modes: default / `--vanilla` (bare-GLM A/B control) / `--doctor` / `--dry-run`; both auth lanes; pins `--model glm-5.2[1m]`; injects the charter (`--append-system-prompt`), the plugin (`--plugin-dir`, default mode only), and a scoped effort config (`--settings config/albion-settings.json`); exports `ALBION_ACTIVE=1` when the plugin loads.
