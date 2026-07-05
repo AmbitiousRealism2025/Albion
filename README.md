@@ -3,7 +3,6 @@
 [![CI](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml/badge.svg)](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-https://github.com/user-attachments/assets/df653b40-7605-4022-a802-2dd6d136db2c
 
 **A GLM-5.2 orchestration system for Claude Code, built around fable-mode.**
 
