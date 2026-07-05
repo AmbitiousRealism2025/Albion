@@ -645,6 +645,38 @@ parse_args() {
   done
 }
 
+check_effort() {
+  local settings_path
+  local effort
+
+  settings_path="${ALBION_SETTINGS_PATH:-${HOME:-}/.claude/settings.json}"
+  # Speak only when a settings file is actually resolvable. In a hermetic
+  # environment with no HOME the path collapses to /.claude/settings.json;
+  # stay silent there rather than emit a misleading result.
+  case "$settings_path" in
+    /.claude/settings.json) return 0 ;;
+  esac
+  [ -r "$settings_path" ] || return 0
+
+  effort="$(python3 - "$settings_path" <<'PY'
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+    value = data.get("effortLevel", "")
+    print(value if isinstance(value, str) else "")
+except Exception:
+    print("")
+PY
+)"
+  if [ "$effort" = "xhigh" ]; then
+    record_check "PASS" "effort" "effortLevel=xhigh (GLM-max) in ${settings_path}"
+  elif [ -z "$effort" ]; then
+    record_check "WARN" "effort" "effortLevel unset in ${settings_path}; Albion expects xhigh (GLM-max, full-depth main agent) — set it via /effort xhigh"
+  else
+    record_check "WARN" "effort" "effortLevel=${effort} in ${settings_path}; Albion expects xhigh (GLM-max) — the main agent should reason at full depth; set it via /effort xhigh"
+  fi
+}
+
 run_checks() {
   local check
   local -a checks
@@ -659,6 +691,7 @@ run_checks() {
     check_hook_suite
     check_manifest
     check_vision
+    check_effort
   )
 
   if [ "$live_mode" -eq 1 ]; then
