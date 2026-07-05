@@ -8,7 +8,7 @@ This is the rehydration document for a new conductor session. It exists because 
 
 ## [LIVE] Where we are right now
 
-**Date of handoff:** 2026-07-05. **The system is built.** M0–M5 are sealed; M6 (release engineering) is complete except the plugin-marketplace **publish**, which is externally gated on the maintainer's account. Everything below is on `main`, CI-green, **28 test files** passing on macOS + ubuntu.
+**Date of handoff:** 2026-07-05 (second update this date — ALB-029 cycle). **The system is built.** M0–M5 are sealed; M6 (release engineering) is complete except the plugin-marketplace **publish**, which is externally gated on the maintainer's account. Everything below is on `main`, **28 test files** passing on macOS + ubuntu. **Push/CI caveat:** the ALB-029 commits (`41fd15f` brief, `86c6daf` implementation, plus the log-019 docs commit) may still be local — the session classifier declined the conductor's direct push to `main` pending maintainer authorization. If `git status` shows the branch ahead of origin, push and confirm CI green before building on top.
 **Conductor for the next session:** Fable 5 — **but VERIFY the live model every session** (statusline shows it): Fable's safeguard silently fell back to Opus 4.8 at the M3→M4 boundary and it went unnoticed for ~15.5h; M4–M6 were actually Opus-conducted (build log 017, post-M6 audit: directionally sound, deny floor wired as the one real fix).
 
 ### Full inventory of what is built & merged (all CI-green)
@@ -18,7 +18,7 @@ This is the rehydration document for a new conductor session. It exists because 
 - **Charter** `charter/ALBION.md` — compiled from `manifest/sections/` by `bin/albion-compile` (`--check` drift gate).
 - **Skills** (`plugin/skills/`): maturity-assessment, delegation, recovery, completion-gate, conductor, + vendored standalone fable-mode. **Agents** (`plugin/agents/`): scout, counterexample-hunter, verifier, simplifier, quick.
 - **Vision** `bin/albion-vision` — direct GLM-4.6V, both lanes, no MCP; `ALBION_VISION_TOKEN`/`ALBION_VISION_LANE` for a separate metered 4.6V key.
-- **Telemetry** `telemetry/albion-metrics` (dual cost model; harness `total_cost_usd` proven ~2.7× overstated). **Bench** `bench/run-task` + `bench/report` + a 7-task corpus (incl. the board-stressing `retry-idempotency`, ALB-026); first A/B report at `bench/reports/m5-first-ab-report.md`. `--vanilla` is a true-bare control (the launcher appends `--disable-slash-commands`).
+- **Telemetry** `telemetry/albion-metrics` (dual cost model; harness `total_cost_usd` proven ~2.7× overstated). **Bench** `bench/run-task` + `bench/report` + the task corpus under `bench/tasks/` (incl. the board-stressing `retry-idempotency` ALB-026, the hidden-holdout `grade-integrity` ALB-027, and the long-horizon `revenue-pipeline` ALB-028); first A/B report at `bench/reports/m5-first-ab-report.md`. `--vanilla` is a true-bare control (the launcher appends `--disable-slash-commands`). **Since ALB-029 the bench discriminates on process:** run records are `albion-bench-run/v2` with a `workbench` object (artifact inventory + `evidence_complete`, stop-gate-aligned), and `bench/report` adds `evidence` / `evidence_complete_rate` columns; v1 records stay ingestible (build log 019).
 - **Distribution:** `install.sh` (fresh-machine, symlinks the tools), `bin/albion-setup` (interactive creds → mode-600 secrets), `bin/albion-package` (builds a **self-contained plugin** dir carrying the launcher; launcher/doctor/hooks are layout-agnostic — verified live from the packaged dist). CI is SHA-pinned + least-privilege; community files + CHANGELOG in place.
 - **Docs:** README (locked, completed-tense, coexistence section, milestone trail at end), `docs/glm-5.2-setup.md`, `docs/packaging.md`, `docs/security-model.md`, `docs/build/orchestration.md`, build logs 000–016.
 
@@ -30,7 +30,7 @@ From the **log-014** long-horizon A/B diagnostic (4 runs on a real 350k-LOC repo
 
 ### What to do next
 1. **Publish the marketplace plugin** (maintainer step): `bin/albion-package` → upload `dist/albion`. Only the publish + `/plugin install` round-trip remains untested (needs the account).
-2. **Have the charter-design conversation** (the decisions above) — likely a `--lite` charter A/B — *before* M7.
+2. **Charter-trim track, phase 2** (the maintainer call is made — no `--lite` product mode, trim the ONE charter; see memory `albion-design-philosophy`): phase 1 (ALB-029, bench process metrics) is done. Next: compile a lean charter variant via `bin/albion-compile` (**throwaway instrument, not a shipped mode**), A/B lean vs. full on `revenue-pipeline`, scored on `evidence_complete_rate` + artifact inventories, not just `solved`. The compaction-recovery ripcord stays interactive (log-018 protocol: `env -i` scrub + isolated `CLAUDE_CONFIG_DIR`).
 3. **M7 — hardening:** provider abstraction (data-sovereignty toggle), interactive conductor steering, lessons promotion.
 
 ### Carry-forward facts (load-bearing)

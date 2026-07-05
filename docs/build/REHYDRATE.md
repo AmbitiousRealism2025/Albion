@@ -46,14 +46,16 @@ terminals.
 
 ## What was done most recently
 
-- Refined the always-on document so that, for any non-trivial request, the model
-  sizes the task and opens its working notes **before** it fans out to delegate
-  agents (previously it sometimes delegated first and never kept notes).
-- Added three new evaluation tasks of escalating size and re-ran a set of
-  side-by-side comparisons (the configured setup vs. a bare baseline, both at
-  maximum reasoning effort).
-- Reviewed a batch of recent work with independent fresh-context reviewers and
-  applied the fixes they surfaced. All committed and green.
+- Taught the evaluation harness to **measure the working-notes area itself**:
+  each run now records which note files a session produced (names and sizes)
+  and whether the notes were complete, and the comparison report shows those
+  columns alongside pass/fail. Previously this could only be checked by hand,
+  which blocked the "lean document" experiment below. (Work packet ALB-029,
+  build log 019.)
+- Before that: refined the always-on document so the model opens its working
+  notes **before** delegating; added three evaluation tasks of escalating size
+  and ran side-by-side comparisons at maximum reasoning effort; reviewed recent
+  work with fresh-context reviewers and applied their fixes.
 
 ## Key findings from the comparisons
 
@@ -76,11 +78,12 @@ terminals.
 - **Publish the packaged plugin to the marketplace** — the one remaining setup
   step; needs the maintainer's account. `bin/albion-package` produces the
   artifact and is verified.
-- **A "lean document" experiment.** Given the finding above, a natural next step
-  is to test a slimmer version of the always-on document that keeps the
-  task-sizing and working-notes behavior only for large jobs and drops it below
-  that threshold. The compiler already supports assembling document variants, so
-  this is a small change to try.
+- **A "lean document" experiment — now unblocked.** Test a slimmer build of the
+  always-on document against the full one on the largest evaluation task, and
+  score them on the new working-notes measurements (not just pass/fail, where
+  they would tie). The slim build is a disposable test instrument assembled by
+  the existing compiler, not a second shipped variant — the maintainer's
+  decision is that the one shipped document gets trimmed, or nothing does.
 - **General hardening** — a pluggable provider setup and more interactive
   steering — if the project continues.
 
