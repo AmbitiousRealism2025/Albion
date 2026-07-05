@@ -23,6 +23,16 @@ The organizing principle: **GLM-5.2 inverts the enforcement equation.** Claude t
 | M3 Charter + skills + agents | `charter/ALBION.md` (compiled from `manifest/`), 5 skills, 5 agents, plugin packaging | [log 011](docs/build/log/011-m3-sealed-exit-test.md) |
 | M4 Vision + conductor protocol | `bin/albion-vision` (direct GLM-4.6V, both lanes), image-read interception, completion-manifest signaling, conductor skill | [log 012](docs/build/log/012-m4-sealed-and-the-hooks-that-never-fired.md) |
 
+## Install
+
+From a fresh clone, run:
+
+```bash
+./install.sh
+```
+
+The installer checks local prerequisites, symlinks `albion`, `albion-doctor`, `albion-vision`, and `albion-compile` into `${HOME}/.local/bin` by default, and prints the PATH line to add if that directory is not already active. Use `./install.sh --prefix DIR` for a different bin directory or `./install.sh --no-doctor` to skip the final offline health check. It never reads or writes Z.ai token values; set `ALBION_ZAI_TOKEN` for the plan lane or `ALBION_AUTH_LANE=api ALBION_ZAI_API_KEY=...` before first run.
+
 ## Quickstart
 
 Prerequisites: Claude Code ≥ 2.1.163 (2.1.195+ preferred), `bash`, `python3`, `curl`, and a Z.ai credential — either a **Coding Plan** subscription token or a metered **API key**.
