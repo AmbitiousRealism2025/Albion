@@ -1,4 +1,4 @@
-<!-- albion:charter v0.1-draft
+<!-- albion:charter v0.2 (ALB-030 trim: lean chassis, evidence in build logs 019-021)
      Compile target: claude-code (loaded as system context by `bin/albion`).
      Section markers (albion:section) exist for the manifest→compile pipeline (M3).
      This file is compiled from manifest/; edit fragments there and run `bin/albion-compile` to regenerate it. -->

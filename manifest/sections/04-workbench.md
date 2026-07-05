@@ -1,30 +1,18 @@
 <!-- albion:section workbench -->
 ## 4. Workbench
 
-Create the smallest useful external workbench. It is a cockpit, not a second
-codebase. It has **three layers**, engaged by task size (§2):
-
-- **Baseline** (every task above Trivial): task tracking + `verification.md` —
-  a definition of done and an evidence-backed record that it was met.
-- **Investigation** (Exploratory and up): `state-map.md` — the real state of
-  the problem, fed by your own reading *and* by scout reports.
-- **Full board** (Open-ended / long-horizon): add `hypotheses.md`,
-  `evidence.md`, `counterexamples.jsonl` — competing theories and the cases
-  that break them.
-
-Open the layer your classification calls for *before* you delegate; a subagent
-is dispatched from the board, not in place of it. Layout (one directory per
-task):
+For every task above Trivial, keep the smallest useful external board: a
+definition of done and an evidence-backed record that it was met. It is a
+cockpit, not a second codebase. Layout (one directory per task):
 
 ```text
 .agent-workbench/fable-mode/
   <task-slug>/
     task.md               # goal, done condition, permitted/forbidden, assumptions, user-only blockers
-    state-map.md          # real state of the problem (§3.2)
-    hypotheses.md         # competing theories (§3.3)
-    evidence.md           # claim / evidence / source / confidence entries
     verification.md       # every check: run, result, or why skipped
-    counterexamples.jsonl # {"hypothesis","case","failure","lesson","next_check"}
+    state-map.md          # on escalation (§3)
+    hypotheses.md         # on escalation (§3)
+    counterexamples.jsonl # on contradiction: {"hypothesis","case","failure","lesson","next_check"}
   lessons/                # shared across tasks, one lesson per file
 ```
 
@@ -35,15 +23,10 @@ Workbench rules:
 - The stop gate (§7) reads `task.md` and `verification.md` from this exact
   layout. A task directory with a `task.md` and no `verification.md` content is
   an open task by definition.
-- Evidence entry format:
-
-  ```text
-  - Claim:
-    Evidence:
-    Source: command output / file path / test / diff / documentation / observation
-    Confidence:
-  ```
-
+- Record every check in `verification.md` — run, result, or why skipped. An
+  empty `verification.md` blocks completion mechanically (§7). Before the
+  final report, audit every progress claim against this file or direct tool
+  output; a claim with no evidence line is removed, not softened.
 - Keep files compact. Update in place; do not append transcripts.
 - Never write secrets, tokens, or credentials into workbench files. The
   scrubber hook (§7) redacts on write, but the discipline is yours; a redacted
@@ -55,18 +38,6 @@ done condition is verified. Update status as work proceeds — tracking is part
 of execution, not paperwork after it. Open tasks block the stop gate.
 
 Lessons: save one only when it is specific, reusable, and likely to prevent a
-future mistake. Format:
-
-```text
-# One-line lesson
-
-Context:
-Correction or confirmed approach:
-Why it mattered:
-When to reuse:
-When not to reuse:
-```
-
-Do not save obvious repo facts, stale claims, duplicated context, or
-speculation. Update or delete lessons that become wrong.
+future mistake — context, correction, why it mattered, when to reuse. Update
+or delete lessons that become wrong.
 

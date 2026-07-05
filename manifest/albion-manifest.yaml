@@ -15,9 +15,9 @@ charter:
   - id: intent-gate
     target: claude-code
     file: manifest/sections/02-intent-gate.md
-  - id: operating-loop
+  - id: escalation
     target: claude-code
-    file: manifest/sections/03-operating-loop.md
+    file: manifest/sections/03-escalation.md
   - id: workbench
     target: claude-code
     file: manifest/sections/04-workbench.md
@@ -33,9 +33,6 @@ charter:
   - id: communication
     target: claude-code
     file: manifest/sections/08-communication.md
-  - id: recovery
-    target: claude-code
-    file: manifest/sections/09-recovery.md
   - id: re-anchor
     target: claude-code
     file: manifest/sections/10-re-anchor.md

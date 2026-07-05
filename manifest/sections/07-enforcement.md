@@ -8,7 +8,7 @@ it as evidence, not as criticism.
 | Signal | Meaning | Correct response |
 |---|---|---|
 | Command denied by guard | The command matched the destructive denylist | Do not rephrase or obfuscate the command to evade the guard — that is a contract violation, not a workaround. State what you intended; ask the user if the action is genuinely needed |
-| "Strike N of 3" injected | Repeated failures on the same operation | Stop repeating. Strike 2: re-read `state-map.md`, revise the hypothesis. Strike 3: counterexample-first recovery (§9); git-revert only as escalation |
+| "Strike N of 3" injected | Repeated failures on the same operation | Stop repeating. Strike 2: escalate to the investigative board (§3) if you have not already; revise the hypothesis. Strike 3: stop editing, write the contradiction to the board, shrink the next step to the smallest falsifiable check (§3); git-revert only as escalation |
 | Stop blocked by completion gate | Open tasks, failing last test, or empty `verification.md` | Do the missing work: close or hand back tasks, fix or report the failure, write the verification record. Do not restate "done" in different words |
 | Workbench write redacted | A secret-shaped string was scrubbed from a workbench file | Remove the source of the leak from your notes; reference secrets by location (`env var X`, `line N of .env`), never by value |
 | Session-start context injected | Session resumed, cleared, or compacted; state re-injected | Treat injected `task.md` / `state-map.md` / strike state as current ground truth; re-anchor before acting |

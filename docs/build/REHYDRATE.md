@@ -46,6 +46,10 @@ terminals.
 
 ## What was done most recently
 
+- **Shipped version 0.2 of the always-on document** (the "lean" resolution —
+  see the open-threads entry below for the full story): 222 lines from 350,
+  validated by a pre-registered comparison before sealing. (Work packet
+  ALB-030, build log 022.)
 - Taught the evaluation harness to **measure the working-notes area itself**:
   each run now records which note files a session produced (names and sizes)
   and whether the notes were complete, and the comparison report shows those
@@ -78,23 +82,19 @@ terminals.
 - **Publish the packaged plugin to the marketplace** — the one remaining setup
   step; needs the maintainer's account. `bin/albion-package` produces the
   artifact and is verified.
-- **The "lean document" experiment — evidence gathering complete; decision now
-  with the maintainer.** A 138-line slim build of the always-on document (vs.
-  the shipped 350) went through six scripted runs per side on the largest
-  evaluation task, plus one interactive run of the slim build. Every run
-  solved the task regardless of document. The differences were all in process:
-  real working notes appeared in **1 of 6** full-document runs vs **4 of 6**
-  slim runs (always complete under slim), and in the interactive run the slim
-  build reproduced everything the full document has ever demonstrated —
-  including recovering its place after a forced context reset by citing its
-  own notes line-by-line. Tentative reading: a shorter document with one
-  simple rule ("every non-trivial task keeps notes") gets followed more
-  reliably than a long one with five task tiers. Six runs per side is still a
-  direction, not proof. Not yet tested under the slim build: work that leans
-  on delegate agents, multi-session work, and deep-investigation tasks. The
-  slim build stays a disposable test instrument (archived under
-  `docs/build/experiments/`) — the maintainer decides whether the one shipped
-  document gets trimmed toward it.
+- **The "lean document" question — RESOLVED and shipped.** The maintainer
+  approved the trim, and the always-on document is now **version 0.2**: 222
+  lines instead of 350, built on the slim chassis the experiments validated.
+  The task-classification table went from five tiers to three with one
+  non-negotiable rule (every non-trivial task keeps working notes), the deep
+  analysis machinery became an escalate-when-the-evidence-says-so section
+  instead of upfront routing, and the delegate-agent and skills tables stayed
+  in trimmed form. A pre-registered validation comparison passed: the new
+  document opened real working notes in 3 of 4 scripted runs (all with
+  complete evidence records) against 0 of 4 for the old document, with every
+  run solving the task. The durable insight: a simple rule gets followed where
+  elaborate routing gets rationalized around — and the document carrying it is
+  a third smaller.
 - **General hardening** — a pluggable provider setup and more interactive
   steering — if the project continues.
 

@@ -81,10 +81,11 @@ The methodology is specified in [`docs/build/orchestration.md`](docs/build/orche
 - Live probes confirmed: hooks, native subagents, and per-task effort routing **work** under GLM-5.2; abstract skill auto-triggering **does not** (0/3) — hence the always-on compiled charter.
 - **Coding Plan tokens authorize direct GLM-4.6V vision calls** on the plan's Anthropic-compatible endpoint (empirically verified; Z.ai's own model-list documentation omits this). Albion's doctor probes it live so a silent entitlement change is caught immediately.
 - A medium orchestrated task costs ≈$1.20 on the API lane with warm cache — or ≈3 prompt-equivalents on a Coding Plan whose $18/mo tier covers 9–25 such tasks per 5-hour window.
+- At maximum reasoning effort the charter changes **process, not outcomes**: GLM-5.2 solves bench tasks with or without it, but the charter buys an auditable evidence trail and recovery across context resets ([logs 018](docs/build/log/018-three-ab-scenarios-what-the-charter-buys.md)[–022](docs/build/log/022-charter-v02-the-trim.md)). A controlled A/B then showed a **simpler gate is followed more reliably than a longer one** — the original 5-tier charter opened its working board in 1/10 headless runs, the rewritten 1-rule gate (charter v0.2, 37% smaller) in 3/4 — so the shipped charter was trimmed on that evidence.
 
 ## Roadmap
 
-M0–M5 sealed; M6 (OSS release engineering) done bar the marketplace submission. Next: **M7 — hardening** (provider abstraction, interactive conductor steering) and acting on the log-014 design questions (a `--lite` charter A/B; re-scoping the workbench).
+M0–M5 sealed; M6 (OSS release engineering) done bar the marketplace submission. The log-014 design questions are resolved: the charter-trim track (logs 019–022) rebuilt the bench to measure process, ran the A/Bs, and sealed the trimmed **charter v0.2**. Next: **M7 — hardening** (provider abstraction, interactive conductor steering) and an escalation-forcing bench fixture.
 
 **Further out:** ports to Opencode (*Oakdale*) and Pi (*Bower Lake*) over the same harness-agnostic manifest and conductor protocol.
 
