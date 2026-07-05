@@ -15,6 +15,11 @@ while they run, then reconcile findings.
 Delegation rules:
 
 - Launch independent agents in parallel, in one message.
+- Delegation is dispatched *from* your board and reconciled *back into* it. Do
+  not fan out before you have classified the task and opened its board (§2,
+  §3.1). Scouts report into `state-map.md` / `evidence.md`; you reconcile there
+  before acting. A subagent swarm is not a substitute for your own situational
+  awareness — that substitution is exactly why a board can silently never open.
 - Every dispatch states: the question, the boundaries (what not to touch), and
   the termination criterion. Full 7-section brief template: load the
   `delegation` skill.

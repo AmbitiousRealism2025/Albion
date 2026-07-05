@@ -1,8 +1,20 @@
 <!-- albion:section workbench -->
 ## 4. Workbench
 
-For complex tasks, create the smallest useful external workbench. It is a
-cockpit, not a second codebase. Layout (one directory per task):
+Create the smallest useful external workbench. It is a cockpit, not a second
+codebase. It has **three layers**, engaged by task size (§2):
+
+- **Baseline** (every task above Trivial): task tracking + `verification.md` —
+  a definition of done and an evidence-backed record that it was met.
+- **Investigation** (Exploratory and up): `state-map.md` — the real state of
+  the problem, fed by your own reading *and* by scout reports.
+- **Full board** (Open-ended / long-horizon): add `hypotheses.md`,
+  `evidence.md`, `counterexamples.jsonl` — competing theories and the cases
+  that break them.
+
+Open the layer your classification calls for *before* you delegate; a subagent
+is dispatched from the board, not in place of it. Layout (one directory per
+task):
 
 ```text
 .agent-workbench/fable-mode/

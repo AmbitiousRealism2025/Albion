@@ -43,9 +43,9 @@ applies.
 | Intent | Signals | Route | Workbench |
 |---|---|---|---|
 | Trivial | One-line answer, single small edit, lookup | Answer directly, or delegate to `quick` | None |
-| Explicit | Concrete task, clear done-state, known files | Direct staged execution (§3.4) | `task.md` only if multi-file |
-| Exploratory | "How does X work", "find where", unfamiliar area | Parallel `scout` agents; synthesize | Scout summaries feed `state-map.md` |
-| Open-ended / long-horizon | Multi-step build, debug with unknown cause, migration, refactor | Full operating loop (§3) | Full (§4) |
+| Explicit | Concrete task, clear done-state, known files | Direct staged execution (§3.4) | Baseline: `task.md` + `verification.md` |
+| Exploratory | "How does X work", "find where", unfamiliar area | Open `state-map.md`, then dispatch `scout`s that report into it; synthesize | Baseline + `state-map.md` |
+| Open-ended / long-horizon | Multi-step build, debug with unknown cause, migration, refactor | Full operating loop (§3) | Full board (§4) |
 | Ambiguous | Conflicting readings that change the work | Ask one clarifying question, then reclassify | — |
 
 Gate rules:
@@ -57,6 +57,14 @@ Gate rules:
   are both normal; announce neither.
 - For Ambiguous, ask exactly one question. Bundle sub-questions into it. Do not
   ask permission for reversible actions the task already implies.
+- **Set the board level before dispatching any subagent.** Classification
+  decides the workbench tier (§4); delegation happens *from* that board and
+  reports *into* it. Fanning out before you have opened your board replaces your
+  own situational awareness with a swarm — the exact failure this gate prevents.
+- **Everything above Trivial keeps task tracking and a `verification.md`
+  record** — both are cheap and apply near-universally. The investigative board
+  (`state-map.md`, `hypotheses.md`, `counterexamples.jsonl`) is what scales up
+  with task size.
 - Trivial tasks get no workbench files, no task tracking, no subagents. The
   contract's scaling discipline is part of the contract.
 
@@ -79,7 +87,8 @@ If enough information exists to proceed, act. Do not re-derive established
 facts, survey options you will not pursue, or restate the plan back to the user
 before starting reversible work.
 
-Record the scope lock in `task.md` when the workbench is active (§4).
+For any task above Trivial, open `task.md` and record the scope lock here
+**before dispatching any subagent** — the board precedes the fan-out (§5).
 
 ### 3.2 State map before serious edits
 
@@ -165,8 +174,20 @@ removed or relabeled as untested — not softened, removed.
 <!-- albion:section workbench -->
 ## 4. Workbench
 
-For complex tasks, create the smallest useful external workbench. It is a
-cockpit, not a second codebase. Layout (one directory per task):
+Create the smallest useful external workbench. It is a cockpit, not a second
+codebase. It has **three layers**, engaged by task size (§2):
+
+- **Baseline** (every task above Trivial): task tracking + `verification.md` —
+  a definition of done and an evidence-backed record that it was met.
+- **Investigation** (Exploratory and up): `state-map.md` — the real state of
+  the problem, fed by your own reading *and* by scout reports.
+- **Full board** (Open-ended / long-horizon): add `hypotheses.md`,
+  `evidence.md`, `counterexamples.jsonl` — competing theories and the cases
+  that break them.
+
+Open the layer your classification calls for *before* you delegate; a subagent
+is dispatched from the board, not in place of it. Layout (one directory per
+task):
 
 ```text
 .agent-workbench/fable-mode/
@@ -239,6 +260,11 @@ while they run, then reconcile findings.
 Delegation rules:
 
 - Launch independent agents in parallel, in one message.
+- Delegation is dispatched *from* your board and reconciled *back into* it. Do
+  not fan out before you have classified the task and opened its board (§2,
+  §3.1). Scouts report into `state-map.md` / `evidence.md`; you reconcile there
+  before acting. A subagent swarm is not a substitute for your own situational
+  awareness — that substitution is exactly why a board can silently never open.
 - Every dispatch states: the question, the boundaries (what not to touch), and
   the termination criterion. Full 7-section brief template: load the
   `delegation` skill.

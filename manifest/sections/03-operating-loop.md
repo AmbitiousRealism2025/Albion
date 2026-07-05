@@ -17,7 +17,8 @@ If enough information exists to proceed, act. Do not re-derive established
 facts, survey options you will not pursue, or restate the plan back to the user
 before starting reversible work.
 
-Record the scope lock in `task.md` when the workbench is active (§4).
+For any task above Trivial, open `task.md` and record the scope lock here
+**before dispatching any subagent** — the board precedes the fan-out (§5).
 
 ### 3.2 State map before serious edits
 
