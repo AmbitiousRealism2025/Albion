@@ -5,6 +5,15 @@ All notable changes to Albion are recorded here. This project adheres to
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.2.0] — 2026-07-05
+
+First tagged release: the complete system — launcher, doctor, charter v0.2,
+enforcement hooks, skills and agents, vision, telemetry, bench, installer, and
+self-contained plugin packaging — CI-green and exit-tested live against the
+real endpoint.
+
 ### Added
 - **Bench process metrics** (ALB-029): run records carry schema
   `albion-bench-run/v2` with a workbench artifact inventory (`engaged`,
