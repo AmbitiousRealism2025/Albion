@@ -314,3 +314,32 @@ doctor_output="$(
 )"
 assert_contains "$doctor_output" "PASS vision: lane=plan model=glm-4.6v live description received" "live doctor runs vision probe"
 assert_not_contains "$doctor_output" "$STUB_TOKEN" "live doctor vision check masks token"
+
+# ALBION_VISION_TOKEN overrides the lane key — the metered scenario where the
+# main model runs on a funded api key but GLM-4.6V uses a separate key.
+curl_record="${TMP_DIR}/vision-token.record"
+: >"$curl_record"
+run_vision "vision-token-override" \
+  ALBION_ZAI_API_KEY="lane-key-must-not-be-used" \
+  ALBION_VISION_TOKEN="stub-vision-key" \
+  ALBION_VISION_CURL="$curl_stub" \
+  ALBION_CURL_RECORD="$curl_record" \
+  ALBION_CURL_SCENARIO=api-success \
+  "${ROOT_DIR}/bin/albion-vision" --lane api "$image_path"
+assert_exit_code 0 "$RUN_CODE" "vision-token override call succeeds"
+assert_contains "$(cat "$curl_record")" "header=Authorization: Bearer stub-vision-key" "ALBION_VISION_TOKEN is used for the vision call"
+assert_not_contains "$(cat "$curl_record")" "lane-key-must-not-be-used" "the lane key is not used when ALBION_VISION_TOKEN is set"
+
+# ALBION_VISION_LANE routes vision independently of the main model's lane.
+curl_record="${TMP_DIR}/vision-lane.record"
+: >"$curl_record"
+run_vision "vision-lane-override" \
+  ALBION_AUTH_LANE=api \
+  ALBION_VISION_LANE=plan \
+  ALBION_ZAI_PLAN_TOKEN="$STUB_TOKEN" \
+  ALBION_VISION_CURL="$curl_stub" \
+  ALBION_CURL_RECORD="$curl_record" \
+  ALBION_CURL_SCENARIO=plan-success \
+  "${ROOT_DIR}/bin/albion-vision" "$image_path"
+assert_exit_code 0 "$RUN_CODE" "vision-lane override call succeeds"
+assert_contains "$(cat "$curl_record")" "url=https://api.z.ai/api/anthropic/v1/messages" "ALBION_VISION_LANE=plan routes vision to the anthropic endpoint despite ALBION_AUTH_LANE=api"

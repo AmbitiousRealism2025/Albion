@@ -46,7 +46,12 @@ parse_args() {
   local lane_was_set
   lane_was_set=0
 
-  if [ -n "${ALBION_AUTH_LANE+x}" ]; then
+  # Vision can use a different lane than the main model: ALBION_VISION_LANE wins
+  # over the general ALBION_AUTH_LANE (e.g. main model on a metered api key,
+  # vision on the plan lane, or vice versa). An explicit --lane still overrides.
+  if [ -n "${ALBION_VISION_LANE+x}" ]; then
+    auth_lane="${ALBION_VISION_LANE}"
+  elif [ -n "${ALBION_AUTH_LANE+x}" ]; then
     auth_lane="${ALBION_AUTH_LANE}"
   else
     auth_lane="plan"
@@ -133,6 +138,14 @@ parse_args() {
 }
 
 resolve_token() {
+  # A dedicated vision credential wins over the lane's normal key. This covers
+  # the metered scenario: the main model runs on a funded api key while GLM-4.6V
+  # uses a separate key (or a different account) via ALBION_VISION_TOKEN.
+  if [ -n "${ALBION_VISION_TOKEN:-}" ]; then
+    auth_token="${ALBION_VISION_TOKEN}"
+    return 0
+  fi
+
   case "$auth_lane" in
     plan)
       if [ -n "${ALBION_ZAI_PLAN_TOKEN+x}" ]; then
