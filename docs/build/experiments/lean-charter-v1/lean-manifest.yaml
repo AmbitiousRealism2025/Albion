@@ -1,0 +1,35 @@
+# Lean charter instrument for the phase-2 A/B (build log 020).
+# Throwaway experimental variant, never shipped (see the maintainer decision in
+# build log 018 / project memory: no --lite product mode; the ONE shipped
+# charter gets trimmed, or nothing does). Keeps contract + intent gate +
+# baseline board + enforcement + communication + re-anchor; drops the operating
+# loop, full-board tiers, delegation table, and skills catalog.
+#
+# Recompile:  bin/albion-compile \
+#               --manifest docs/build/experiments/lean-charter-v1/lean-manifest.yaml \
+#               --output /tmp/ALBION-LEAN.md
+# Run a lean-arm bench task by pointing the launcher at the compiled file:
+#   ALBION_CHARTER=/tmp/ALBION-LEAN.md bench/run-task --task <dir> --arm albion --out <dir>
+schema: albion-manifest/v1
+charter:
+  - id: preamble
+    target: claude-code
+    file: manifest/sections/00-preamble.md
+  - id: contract
+    target: claude-code
+    file: manifest/sections/01-contract.md
+  - id: intent-gate-lean
+    target: claude-code
+    file: docs/build/experiments/lean-charter-v1/sections/02-intent-gate-lean.md
+  - id: workbench-lean
+    target: claude-code
+    file: docs/build/experiments/lean-charter-v1/sections/04-workbench-lean.md
+  - id: enforcement-lean
+    target: claude-code
+    file: docs/build/experiments/lean-charter-v1/sections/07-enforcement-lean.md
+  - id: communication
+    target: claude-code
+    file: manifest/sections/08-communication.md
+  - id: re-anchor
+    target: claude-code
+    file: manifest/sections/10-re-anchor.md
