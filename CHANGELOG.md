@@ -37,6 +37,11 @@ All notable changes to Albion are recorded here. This project adheres to
   `xhigh` (GLM-max), the depth Albion's design requires.
 
 ### Changed
+- The README is now **purely user-facing** — what Albion is, install,
+  quickstart, coexistence, honest expectations, disclosures. The development
+  history (build methodology, journal highlights, milestone trail, empirical
+  findings, status) moved intact to `docs/build/README.md`, the development
+  record.
 - **Charter v0.2 — the trim** (ALB-030): the intent gate went from five tiers to
   three with one non-negotiable board rule; the 103-line operating loop became a
   31-line evidence-triggered escalation section; delegation was tightened. 222
