@@ -219,6 +219,7 @@ test_seed_tasks_start_red() {
   assert_seed_prefails peak-window
   assert_seed_prefails retry-idempotency
   assert_seed_prefails grade-integrity
+  assert_seed_prefails revenue-pipeline
 }
 
 test_grade_integrity_holdout_catches_hardcode() {
