@@ -78,20 +78,23 @@ terminals.
 - **Publish the packaged plugin to the marketplace** — the one remaining setup
   step; needs the maintainer's account. `bin/albion-package` produces the
   artifact and is verified.
-- **The "lean document" experiment — first results in, and they surprised us.**
-  A 138-line slim build of the always-on document (vs. the shipped 350) was
-  tested against the full one on the largest evaluation task, three runs each,
-  in scripted non-interactive mode. Both versions solved every run. But the
-  working-notes area opened **zero of three** times under the full document and
-  **two of three** times under the slim one — with complete, high-quality notes
-  both times. Tentative reading: a shorter document with one simple rule
-  ("every non-trivial task keeps notes") gets followed more reliably than a
-  long one with five task tiers. Three runs per side is a direction, not proof.
-  Next: more scripted runs, plus one interactive run of the slim build to
-  confirm it keeps the recovery-after-reset behavior the full document has
-  already demonstrated. The slim build stays a disposable test instrument
-  (archived under `docs/build/experiments/`) — the maintainer's decision is
-  that the one shipped document gets trimmed, or nothing does.
+- **The "lean document" experiment — evidence gathering complete; decision now
+  with the maintainer.** A 138-line slim build of the always-on document (vs.
+  the shipped 350) went through six scripted runs per side on the largest
+  evaluation task, plus one interactive run of the slim build. Every run
+  solved the task regardless of document. The differences were all in process:
+  real working notes appeared in **1 of 6** full-document runs vs **4 of 6**
+  slim runs (always complete under slim), and in the interactive run the slim
+  build reproduced everything the full document has ever demonstrated —
+  including recovering its place after a forced context reset by citing its
+  own notes line-by-line. Tentative reading: a shorter document with one
+  simple rule ("every non-trivial task keeps notes") gets followed more
+  reliably than a long one with five task tiers. Six runs per side is still a
+  direction, not proof. Not yet tested under the slim build: work that leans
+  on delegate agents, multi-session work, and deep-investigation tasks. The
+  slim build stays a disposable test instrument (archived under
+  `docs/build/experiments/`) — the maintainer decides whether the one shipped
+  document gets trimmed toward it.
 - **General hardening** — a pluggable provider setup and more interactive
   steering — if the project continues.
 
