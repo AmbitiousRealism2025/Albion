@@ -1,0 +1,37 @@
+name: Bug report
+description: Something in Albion behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For anything security-relevant, use a private
+        advisory instead (see SECURITY.md), not a public issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what actually occurred.
+      placeholder: I ran `bin/albion ...` and ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: The smallest set of steps that reproduces it.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: albion-doctor output
+      description: Output of `bin/albion-doctor` (redact your token; it is masked already).
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Environment
+      description: OS, Claude Code version (`claude --version`), auth lane (plan/api).
+    validations:
+      required: true

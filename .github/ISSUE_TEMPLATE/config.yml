@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/AmbitiousRealism2025/Albion/security/advisories/new
+    about: Report security issues privately — do not open a public issue.
+  - name: Threat model & hook scope
+    url: https://github.com/AmbitiousRealism2025/Albion/blob/main/docs/security-model.md
+    about: What Albion's hooks do and deliberately do not defend, before you file.
