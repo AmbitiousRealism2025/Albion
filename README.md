@@ -13,7 +13,7 @@ The organizing principle: **GLM-5.2 inverts the enforcement equation.** Claude t
 
 ## Status
 
-**Milestones M0–M4 are sealed** (verified, CI-green, exit-tested live against the real endpoint). Current work: **M5 — telemetry + the three-arm A/B bench.**
+**Milestones M0–M5 are sealed** (verified, CI-green, exit-tested live against the real endpoint). **M6 (OSS release engineering) is substantially complete** — installer, CI supply-chain hardening, community files, and a hook-registration smoke-check are in; the marketplace submission is the remaining externally-gated step.
 
 | Milestone | Delivered | Journal |
 |---|---|---|
@@ -22,6 +22,8 @@ The organizing principle: **GLM-5.2 inverts the enforcement equation.** Claude t
 | M2 Hooks + state engine | Session-state JSON engine; enforcement hooks, adversarially red-teamed | [log 008](docs/build/log/008-milestone-2-closeout.md) |
 | M3 Charter + skills + agents | `charter/ALBION.md` (compiled from `manifest/`), 5 skills, 5 agents, plugin packaging | [log 011](docs/build/log/011-m3-sealed-exit-test.md) |
 | M4 Vision + conductor protocol | `bin/albion-vision` (direct GLM-4.6V, both lanes), image-read interception, completion-manifest signaling, conductor skill | [log 012](docs/build/log/012-m4-sealed-and-the-hooks-that-never-fired.md) |
+| M5 Telemetry + A/B bench | Dual-cost-model telemetry, `last_test` writer, bench harness + report generator + 6-task corpus, first A/B report | [log 013](docs/build/log/013-m5-sealed-first-ab-report.md) |
+| M6 OSS release engineering | `install.sh`, SHA-pinned CI, community files, hook-registration smoke-check, effort-default fix | [log 015](docs/build/log/015-m6-oss-release-engineering.md) |
 
 ## Install
 
