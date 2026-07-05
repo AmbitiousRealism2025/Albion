@@ -6,6 +6,14 @@ All notable changes to Albion are recorded here. This project adheres to
 ## [Unreleased]
 
 ### Added
+- **Bench process metrics** (ALB-029): run records carry schema
+  `albion-bench-run/v2` with a workbench artifact inventory (`engaged`,
+  `evidence_complete`, per-task file listing), and `bench/report` compares arms
+  on `evidence_complete_rate` alongside solve rate. v1 records remain
+  ingestible.
+- The lean-charter experiment instrument is archived under
+  `docs/build/experiments/lean-charter-v1/` and recompiles byte-identical to
+  the artifact used in the published runs.
 - **Self-contained plugin packaging** (`bin/albion-package`): assembles a single
   marketplace-ready directory that is both a valid Claude Code plugin and a
   complete Albion install (it carries the launcher, `env/`, `charter/`, `config/`,
@@ -29,6 +37,13 @@ All notable changes to Albion are recorded here. This project adheres to
   `xhigh` (GLM-max), the depth Albion's design requires.
 
 ### Changed
+- **Charter v0.2 — the trim** (ALB-030): the intent gate went from five tiers to
+  three with one non-negotiable board rule; the 103-line operating loop became a
+  31-line evidence-triggered escalation section; delegation was tightened. 222
+  lines from 350. Sealed only after a pre-registered A/B showed the new document
+  opens real, evidence-complete working boards 3/4 headless where the old one
+  scored 0/4 (solve rate unchanged) — see build logs 019–022 for the evidence
+  trail.
 - CI now pins `actions/checkout` to a commit SHA (supply-chain hardening) and runs
   with least-privilege `permissions: contents: read`.
 

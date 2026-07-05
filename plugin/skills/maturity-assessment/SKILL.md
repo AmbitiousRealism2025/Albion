@@ -5,7 +5,7 @@ description: Load when entering an unfamiliar codebase, or before proposing an a
 
 # Maturity Assessment
 
-Extend charter §3.2 with a codebase maturity read. Record the result in `state-map.md` before architecture-level judgment or broad edits.
+Extend charter §3 (escalation) with a codebase maturity read. Record the result in `state-map.md` before architecture-level judgment or broad edits.
 
 ## Dimensions
 

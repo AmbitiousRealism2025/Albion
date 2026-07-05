@@ -5,7 +5,7 @@ description: Load on strike 3, a tangled run, or a contradiction that cannot be 
 
 # Recovery
 
-Extend charter §9 when the next edit would be guesswork. Stop edits until the contradiction is classified.
+Extend charter §3 (escalation) when the next edit would be guesswork. Stop edits until the contradiction is classified.
 
 ## Diagnosis Table
 

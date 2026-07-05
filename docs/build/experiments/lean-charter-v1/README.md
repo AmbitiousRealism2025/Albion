@@ -15,4 +15,11 @@ to dropped sections removed); the operating loop, full-board tiers, delegation
 table, and skills catalog dropped. 138 lines compiled vs 350.
 
 Recompile and run instructions are in the header of `lean-manifest.yaml`.
-Results and interpretation: `docs/build/log/020-lean-charter-headless-ab.md`.
+Results and interpretation: build logs 020 (headless A/B), 021 (n=6 +
+interactive recovery), and 022 (the outcome).
+
+**This instrument's line of evidence is concluded:** the maintainer approved
+the trim and the shipped charter is now v0.2 — the lean chassis with the
+delegation/skills tables and an evidence-triggered escalation section re-added
+(ALB-030, validated 3/4 vs 0/4 real boards before sealing). The directory
+stays as the reproducible record of what was actually run.

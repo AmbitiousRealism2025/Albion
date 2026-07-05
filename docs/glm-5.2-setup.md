@@ -65,6 +65,21 @@ claude --model 'glm-5.2[1m]'
 Vision (GLM-4.6V) works on the plan token directly via `/api/anthropic`; on a metered
 key you can point it at a separate vision credential (see `ALBION_VISION_TOKEN`).
 
+## Launcher environment overrides
+
+`bin/albion` reads these before launching (all optional; defaults in parentheses):
+
+| Variable | Effect |
+|---|---|
+| `ALBION_AUTH_LANE` | `plan` (default) or `api` — selects which token the env script uses |
+| `ALBION_MODEL` | Model pin passed as `--model` (`glm-5.2[1m]`) |
+| `ALBION_CHARTER` | Path to the charter file injected as system context (`charter/ALBION.md`). This is how charter A/B experiments run an alternative document against the same launcher — see `docs/build/experiments/` |
+| `ALBION_VISION_TOKEN`, `ALBION_VISION_LANE` | Separate credential/lane for GLM-4.6V (see above) |
+
+Token variables (`ALBION_ZAI_PLAN_TOKEN`, `ALBION_ZAI_API_KEY`, fallback
+`ALBION_ZAI_TOKEN`) are written by `bin/albion-setup`; the full input contract is
+documented in the header of `env/albion-env.sh`.
+
 ## What Albion adds on top
 
 You can stop here and have cheap GLM-5.2 in Claude Code. Albion wraps all of the above
