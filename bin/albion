@@ -199,6 +199,13 @@ resolve_settings() {
 build_final_argv() {
   final_argv=("claude")
 
+  # The control arm must be genuinely bare: without this, user-scope skills
+  # (e.g. a globally installed fable-mode) auto-load and contaminate the A/B
+  # baseline — the exact confound found in the first long-horizon diagnostic.
+  if [ "$mode" = "vanilla" ]; then
+    final_argv+=("--disable-slash-commands")
+  fi
+
   if [ -n "$charter_path" ]; then
     final_argv+=("--append-system-prompt" "$(cat "$charter_path")")
   fi

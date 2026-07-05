@@ -18,7 +18,7 @@ This is the rehydration document for a new conductor session. It exists because 
 - **Charter** `charter/ALBION.md` — compiled from `manifest/sections/` by `bin/albion-compile` (`--check` drift gate).
 - **Skills** (`plugin/skills/`): maturity-assessment, delegation, recovery, completion-gate, conductor, + vendored standalone fable-mode. **Agents** (`plugin/agents/`): scout, counterexample-hunter, verifier, simplifier, quick.
 - **Vision** `bin/albion-vision` — direct GLM-4.6V, both lanes, no MCP; `ALBION_VISION_TOKEN`/`ALBION_VISION_LANE` for a separate metered 4.6V key.
-- **Telemetry** `telemetry/albion-metrics` (dual cost model; harness `total_cost_usd` proven ~2.7× overstated). **Bench** `bench/run-task` + `bench/report` + a 6-task corpus; first A/B report at `bench/reports/m5-first-ab-report.md`.
+- **Telemetry** `telemetry/albion-metrics` (dual cost model; harness `total_cost_usd` proven ~2.7× overstated). **Bench** `bench/run-task` + `bench/report` + a 7-task corpus (incl. the board-stressing `retry-idempotency`, ALB-026); first A/B report at `bench/reports/m5-first-ab-report.md`. `--vanilla` is a true-bare control (the launcher appends `--disable-slash-commands`).
 - **Distribution:** `install.sh` (fresh-machine, symlinks the tools), `bin/albion-setup` (interactive creds → mode-600 secrets), `bin/albion-package` (builds a **self-contained plugin** dir carrying the launcher; launcher/doctor/hooks are layout-agnostic — verified live from the packaged dist). CI is SHA-pinned + least-privilege; community files + CHANGELOG in place.
 - **Docs:** README (locked, completed-tense, coexistence section, milestone trail at end), `docs/glm-5.2-setup.md`, `docs/packaging.md`, `docs/security-model.md`, `docs/build/orchestration.md`, build logs 000–016.
 

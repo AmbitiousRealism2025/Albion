@@ -230,8 +230,16 @@ test_permissions_fragment_is_valid_json() {
   python3 -m json.tool "${ROOT_DIR}/plugin/settings/permissions-deny.json" >/dev/null
 }
 
-test_settings_readme_is_five_lines() {
-  assert_eq "5" "$(wc -l <"${ROOT_DIR}/plugin/settings/README.md" | tr -d ' ')" "settings README should stay at five lines"
+test_settings_readme_is_compact_and_wired() {
+  # Invariant (not a constant): the deny-fragment README stays reviewably
+  # compact AND points at the launcher-injected copy so the two can't diverge
+  # in silence. (Was a five-line literal; converted per the assert-invariants
+  # rule when the deny floor was wired into config/albion-settings.json.)
+  local lines
+  lines="$(wc -l <"${ROOT_DIR}/plugin/settings/README.md" | tr -d ' ')"
+  [ "$lines" -le 10 ] || assert_fail "settings README should stay compact (<=10 lines), got ${lines}"
+  assert_contains "$(cat "${ROOT_DIR}/plugin/settings/README.md")" "config/albion-settings.json" \
+    "settings README names the launcher-injected settings copy"
 }
 
 test_guard_script_exists() {
@@ -246,7 +254,7 @@ main() {
   test_malformed_input_allows_and_logs
   test_dangerous_commands_deny
   test_permissions_fragment_is_valid_json
-  test_settings_readme_is_five_lines
+  test_settings_readme_is_compact_and_wired
 }
 
 main "$@"

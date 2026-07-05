@@ -34,5 +34,12 @@ doctor="$(ALBION_ZAI_TOKEN=probe "${OUT}/bin/albion-doctor" --offline 2>/dev/nul
 assert_contains "$doctor" "PASS hook-suite:" "packaged doctor verifies hooks from the package"
 assert_contains "$doctor" "SKIP manifest:" "packaged doctor skips the manifest check with no source"
 
+# Manifest-dependent dev tools must NOT ship (they'd be silently broken without
+# manifest/), and no OS junk files ride along.
+for absent in bin/albion-compile bin/albion-package; do
+  [ ! -e "${OUT}/${absent}" ] || assert_fail "packaged plugin must not ship ${absent}"
+done
+[ -z "$(find "$OUT" -name '.DS_Store' -print -quit)" ] || assert_fail "packaged plugin contains .DS_Store junk"
+
 # The dev suite's launcher/doctor still resolve the classic layout (plugin subdir).
 [ -f "${ROOT_DIR}/plugin/.claude-plugin/plugin.json" ] || assert_fail "dev layout precondition"

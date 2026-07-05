@@ -18,7 +18,9 @@ The result is a directory that is simultaneously:
 - a valid Claude Code plugin — `.claude-plugin/plugin.json`, `hooks/`, `scripts/`,
   `skills/`, `agents/` at its root; and
 - a complete Albion install — `bin/` (the launcher + tools), `env/`, `charter/`
-  (the compiled charter), `config/`, and `state/`.
+  (the compiled charter), `config/`, and `state/`. The manifest-dependent dev
+  tools (`albion-compile`, `albion-package`) are deliberately omitted: a package
+  ships the compiled charter without the `manifest/` source they require.
 
 `albion-package` refuses to build if the charter is out of sync with `manifest/`
 (run `bin/albion-compile` first), and it self-checks that the packaged launcher

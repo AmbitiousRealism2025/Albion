@@ -21,7 +21,8 @@ This milestone ran unattended with explicit authorization to take M6 end-to-end.
 
 ## Test suite
 
-12 → **25 files**, green on macOS and Ubuntu; CI green on every push this milestone.
+22 → **25 files**, green on macOS and Ubuntu; CI green on every push this milestone.
+*(Correction, post-audit: this originally misstated the starting count as 12; log 013 sealed M5 at 22 files.)*
 
 ## Queued for the maintainer (design decisions, not done autonomously)
 

@@ -172,7 +172,6 @@ assert record["verify_exit"] != 0
 assert record["manifest"] is None
 ' "${out_dir}/run-record.json"
   assert_contains "$(cat "${out_dir}/workspace/.stub-args")" "--vanilla" "vanilla arm is passed to launcher"
-  assert_contains "$(cat "${out_dir}/workspace/.stub-args")" "--disable-slash-commands" "vanilla arm is a true-bare control (no auto-loaded skills)"
   assert_contains "$(cat "${out_dir}/workspace/.stub-args")" "--allowedTools Bash(python3:*)" "allowed tools are passed to launcher"
 }
 

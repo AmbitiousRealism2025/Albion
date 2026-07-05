@@ -157,11 +157,10 @@ def run_launcher(args: Args, workspace: Path, result_path: Path) -> None:
         case "albion":
             pass
         case "vanilla":
-            # A true-bare control: `--vanilla` drops the charter/plugin, and
-            # `--disable-slash-commands` stops user-scope skills (e.g. a globally
-            # installed fable-mode) from auto-loading and contaminating the arm.
+            # bin/albion --vanilla is a true-bare control: the launcher itself
+            # appends --disable-slash-commands so user-scope skills cannot
+            # auto-load and contaminate the arm.
             command.append("--vanilla")
-            command.append("--disable-slash-commands")
         case unreachable:
             raise AssertionError(f"unreachable arm: {unreachable}")
     with result_path.open("wb") as stdout_file, (args.out_dir / "launcher.stderr").open("wb") as stderr_file:

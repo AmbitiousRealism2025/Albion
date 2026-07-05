@@ -56,8 +56,14 @@ cp -R "${REPO}/state" "${OUT}/state"
 mkdir -p "${OUT}/charter"
 cp "${REPO}/charter/ALBION.md" "${OUT}/charter/ALBION.md"
 
-# Drop dev-only placeholders; keep everything runtime-relevant.
+# Drop dev-only placeholders and OS junk; keep everything runtime-relevant.
 find "$OUT" -name '.gitkeep' -delete 2>/dev/null || true
+find "$OUT" -name '.DS_Store' -delete 2>/dev/null || true
+
+# Drop the manifest-dependent dev tools: they need the manifest/ source, which
+# a packaged plugin deliberately does not carry (it ships the compiled charter
+# only), so they would ship silently broken.
+rm -f "${OUT}/bin/albion-compile" "${OUT}/bin/albion-package"
 
 # Sanity: the packaged launcher must resolve the plugin, charter, and settings
 # from inside the package (not the source repo).

@@ -61,3 +61,36 @@ out="$(run_doctor_with_settings "${TMP_DIR}/xhigh.json")"
 pass_lines="$(printf '%s\n' "$out" | grep -c '^PASS ')"
 summary_passes="$(printf '%s\n' "$out" | sed -n 's/^\([0-9][0-9]*\) pass.*/\1/p')"
 assert_eq "$pass_lines" "$summary_passes" "doctor pass tally matches PASS lines with effort check active"
+
+# --- deny floor is wired into the injected settings layer -------------------
+# The security model names permissions-deny as the hard floor; the launcher
+# delivers config/albion-settings.json via --settings, so the deny rules must
+# live there — and must stay byte-identical to the stock-claude fragment in
+# plugin/settings/permissions-deny.json (the manual-merge copy).
+
+if ! python3 - "${ROOT_DIR}/config/albion-settings.json" <<'PY'
+import json, sys
+settings = json.load(open(sys.argv[1]))
+deny = settings.get("permissions", {}).get("deny")
+assert isinstance(deny, list) and deny, "injected settings must carry permissions.deny"
+assert "Bash(rm -rf:*)" in deny, "deny floor must include the rm -rf rule"
+assert "Read(**/secrets/**)" in deny, "deny floor must include the secrets read rule"
+PY
+then
+  assert_fail "injected settings layer is missing the deny floor"
+fi
+printf 'ok - injected settings layer carries the deny floor\n'
+
+if ! python3 - "${ROOT_DIR}/config/albion-settings.json" "${ROOT_DIR}/plugin/settings/permissions-deny.json" <<'PY'
+import json, sys
+wired = json.load(open(sys.argv[1]))["permissions"]["deny"]
+fragment = json.load(open(sys.argv[2]))["permissions"]["deny"]
+assert wired == fragment, (
+    "deny lists drifted between config/albion-settings.json and "
+    "plugin/settings/permissions-deny.json — update both together"
+)
+PY
+then
+  assert_fail "deny floor drift between wired settings and the stock fragment"
+fi
+printf 'ok - wired deny floor matches plugin/settings/permissions-deny.json\n'
