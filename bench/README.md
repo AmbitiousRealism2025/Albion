@@ -39,18 +39,32 @@ and embeds that record verbatim.
 
 ## Run Record
 
-`<out>/run-record.json` uses schema `albion-bench-run/v1`:
+`<out>/run-record.json` uses schema `albion-bench-run/v2`:
 
 ```json
 {
-  "schema": "albion-bench-run/v1",
+  "schema": "albion-bench-run/v2",
   "task_id": "ledger-cache",
   "arm": "albion",
   "solved": true,
   "verify_exit": 0,
   "metrics": {"schema": "albion-task-metrics/v1"},
   "manifest": null,
-  "workbench_present": false,
+  "workbench_present": true,
+  "workbench": {
+    "engaged": true,
+    "evidence_complete": true,
+    "tasks": [
+      {
+        "slug": "fix-pipeline",
+        "files": [
+          {"name": "task.md", "bytes": 812},
+          {"name": "verification.md", "bytes": 1430}
+        ]
+      }
+    ],
+    "lessons_file_count": 0
+  },
   "started_at": "2026-07-04T12:00:00Z",
   "wall_seconds": 0
 }
@@ -59,4 +73,21 @@ and embeds that record verbatim.
 `manifest` is the workspace `.albion/completion-manifest.json` object when
 present and valid JSON, otherwise `null`. `workbench_present` is true when the
 workspace has any `.agent-workbench/fable-mode/` task directories other than
-`lessons`.
+`lessons`; it is retained in v2 for continuity.
+
+The v2 `workbench` object records the board artifacts left by the session:
+
+- `engaged`: same predicate as `workbench_present`.
+- `tasks`: one entry per `.agent-workbench/fable-mode/<task-slug>/` directory
+  other than `lessons`, sorted by slug. Each entry lists the regular files
+  directly inside that task directory, sorted by name, with byte sizes.
+- `evidence_complete`: true only when the board is engaged and every task
+  directory has non-whitespace content in both `task.md` and `verification.md`.
+- `lessons_file_count`: count of regular files under
+  `.agent-workbench/fable-mode/lessons/`.
+
+`bench/report` accepts both v1 and v2 run records. The per-task table includes
+an `evidence` column: v1-only cells render `n/a`, while v2 cells show the
+evidence-complete rate over records that carry `workbench.evidence_complete`.
+The per-arm table includes `evidence_complete_rate` with the same denominator
+rule; arms with no v2 evidence data render `0/0 (n/a)`.

@@ -34,6 +34,16 @@ if [ "${ALBION_BENCH_STUB_MANIFEST:-0}" = "1" ]; then
 {"schema":"albion-completion-manifest/v1","session_id":"stub-session","written_at":"2026-07-04T12:00:00Z","status":"complete","last_test":"pass","workbench_tasks":[{"slug":"task-one","verification_present":true}],"open_task_count":0}
 JSON
 fi
+if [ "${ALBION_BENCH_STUB_BOARD:-none}" != "none" ]; then
+  mkdir -p .agent-workbench/fable-mode/fix-pipeline .agent-workbench/fable-mode/lessons
+  printf 'Investigate the failing pipeline.\n' > .agent-workbench/fable-mode/fix-pipeline/task.md
+  if [ "${ALBION_BENCH_STUB_BOARD}" = "whitespace" ]; then
+    printf ' \n\t\n' > .agent-workbench/fable-mode/fix-pipeline/verification.md
+  else
+    printf 'Verified with the task oracle.\n' > .agent-workbench/fable-mode/fix-pipeline/verification.md
+  fi
+  printf 'Prefer evidence over vibes.\n' > .agent-workbench/fable-mode/lessons/lesson.md
+fi
 cat "$ALBION_BENCH_STUB_RESULT"
 SH
   chmod +x "$stub_path"
@@ -136,7 +146,7 @@ test_runner_solved_record_and_missing_manifest() {
   assert_file_exists "${out_dir}/workspace/app/status.txt" "runner preserves workspace"
 
   assert_json '
-assert record["schema"] == "albion-bench-run/v1"
+assert record["schema"] == "albion-bench-run/v2"
 assert record["task_id"] == "task-pass"
 assert record["arm"] == "albion"
 assert record["solved"] is True
@@ -145,6 +155,12 @@ assert record["metrics"]["schema"] == "albion-task-metrics/v1"
 assert record["metrics"]["task_label"] == "task-pass"
 assert record["manifest"] is None
 assert record["workbench_present"] is False
+assert record["workbench"] == {
+    "engaged": False,
+    "evidence_complete": False,
+    "tasks": [],
+    "lessons_file_count": 0,
+}
 assert isinstance(record["started_at"], str) and record["started_at"].endswith("Z")
 assert isinstance(record["wall_seconds"], int)
 ' "${out_dir}/run-record.json"
@@ -164,7 +180,7 @@ test_runner_unsolved_record_and_vanilla_flag() {
   run_bench fail "$task_dir" vanilla "$out_dir"
   assert_exit_code 0 "$RUN_CODE" "runner exits zero when oracle fails"
   assert_json '
-assert record["schema"] == "albion-bench-run/v1"
+assert record["schema"] == "albion-bench-run/v2"
 assert record["task_id"] == "task-fail"
 assert record["arm"] == "vanilla"
 assert record["solved"] is False
@@ -187,6 +203,65 @@ test_runner_manifest_and_workbench_presence() {
   assert_json '
 assert record["manifest"]["schema"] == "albion-completion-manifest/v1"
 assert record["workbench_present"] is True
+assert record["workbench"] == {
+    "engaged": True,
+    "evidence_complete": False,
+    "tasks": [{"slug": "task-one", "files": []}],
+    "lessons_file_count": 0,
+}
+' "${out_dir}/run-record.json"
+}
+
+test_runner_complete_workbench_record() {
+  local task_dir
+  local out_dir
+  task_dir="${TMP_DIR}/task-workbench"
+  out_dir="${TMP_DIR}/run-workbench"
+  write_runner_task "$task_dir"
+
+  run_bench workbench "$task_dir" albion "$out_dir" ALBION_BENCH_STUB_FIX=1 ALBION_BENCH_STUB_BOARD=complete
+  assert_exit_code 0 "$RUN_CODE" "runner accepts populated workbench"
+  assert_json '
+task_text = "Investigate the failing pipeline.\n"
+verification_text = "Verified with the task oracle.\n"
+assert record["schema"] == "albion-bench-run/v2"
+assert record["workbench_present"] is True
+assert record["workbench"] == {
+    "engaged": True,
+    "evidence_complete": True,
+    "tasks": [
+        {
+            "slug": "fix-pipeline",
+            "files": [
+                {"name": "task.md", "bytes": len(task_text.encode("utf-8"))},
+                {"name": "verification.md", "bytes": len(verification_text.encode("utf-8"))},
+            ],
+        }
+    ],
+    "lessons_file_count": 1,
+}
+' "${out_dir}/run-record.json"
+}
+
+test_runner_whitespace_verification_is_incomplete() {
+  local task_dir
+  local out_dir
+  task_dir="${TMP_DIR}/task-workbench-open"
+  out_dir="${TMP_DIR}/run-workbench-open"
+  write_runner_task "$task_dir"
+
+  run_bench workbench-open "$task_dir" albion "$out_dir" ALBION_BENCH_STUB_FIX=1 ALBION_BENCH_STUB_BOARD=whitespace
+  assert_exit_code 0 "$RUN_CODE" "runner accepts open workbench"
+  assert_json '
+files = record["workbench"]["tasks"][0]["files"]
+assert record["workbench_present"] is True
+assert record["workbench"]["engaged"] is True
+assert record["workbench"]["evidence_complete"] is False
+assert record["workbench"]["lessons_file_count"] == 1
+assert files == [
+    {"name": "task.md", "bytes": len("Investigate the failing pipeline.\n".encode("utf-8"))},
+    {"name": "verification.md", "bytes": len(" \n\t\n".encode("utf-8"))},
+]
 ' "${out_dir}/run-record.json"
 }
 
@@ -273,6 +348,8 @@ STUB="$(write_launcher_stub)"
 test_runner_solved_record_and_missing_manifest
 test_runner_unsolved_record_and_vanilla_flag
 test_runner_manifest_and_workbench_presence
+test_runner_complete_workbench_record
+test_runner_whitespace_verification_is_incomplete
 test_runner_symlink_safe_entrypoint
 test_seed_tasks_start_red
 test_ledger_oracle_rejects_test_tampering

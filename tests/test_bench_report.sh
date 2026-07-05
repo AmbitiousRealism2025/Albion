@@ -27,9 +27,10 @@ runs_dir = Path(sys.argv[1])
 
 
 def write_record(path, *, task_id, arm, solved, lane, started_at, wall_seconds, turns,
-                 cost, pricing_incomplete, gate_blocks, strikes, workbench, manifest_last_test):
+                 cost, pricing_incomplete, gate_blocks, strikes, workbench,
+                 manifest_last_test, schema="albion-bench-run/v1", evidence_complete=None):
     record = {
-        "schema": "albion-bench-run/v1",
+        "schema": schema,
         "task_id": task_id,
         "arm": arm,
         "solved": solved,
@@ -59,6 +60,21 @@ def write_record(path, *, task_id, arm, solved, lane, started_at, wall_seconds, 
         "started_at": started_at,
         "wall_seconds": wall_seconds,
     }
+    if evidence_complete is not None:
+        record["workbench"] = {
+            "engaged": workbench,
+            "evidence_complete": evidence_complete,
+            "tasks": [
+                {
+                    "slug": "fix-pipeline",
+                    "files": [
+                        {"name": "task.md", "bytes": 32},
+                        {"name": "verification.md", "bytes": 27},
+                    ],
+                }
+            ],
+            "lessons_file_count": 1,
+        }
     path.mkdir(parents=True, exist_ok=True)
     (path / "run-record.json").write_text(json.dumps(record, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -112,6 +128,25 @@ write_record(
     manifest_last_test="fail",
 )
 write_record(
+    runs_dir / "gamma" / "albion",
+    task_id="gamma",
+    arm="albion",
+    solved=True,
+    lane="api",
+    started_at="2026-07-04T10:40:00Z",
+    wall_seconds=50,
+    turns=3,
+    cost={"usd": 0.90},
+    pricing_incomplete=False,
+    gate_blocks=0,
+    strikes=0,
+    workbench=True,
+    manifest_last_test="pass",
+    schema="albion-bench-run/v2",
+    evidence_complete=True,
+)
+
+write_record(
     runs_dir / "beta" / "vanilla",
     task_id="beta",
     arm="vanilla",
@@ -142,18 +177,20 @@ test_report_stdout_contains_expected_values() {
 
   output="$("$REPORT" "$runs_dir")"
 
-  assert_contains "$output" "Run counts by arm: albion=2, vanilla=2" "report counts per arm"
+  assert_contains "$output" "Run counts by arm: albion=3, vanilla=2" "report counts per arm"
   assert_contains "$output" "Lanes: api, plan" "report lists mixed lanes"
-  assert_contains "$output" "Date range: 2026-07-04T10:00:00Z to 2026-07-04T10:30:00Z" "report date range"
-  assert_contains "$output" "| alpha | albion | 1 | 1/1 | 10 | 4 | 0.3 |  | 0 | 0 | yes |" "alpha albion row"
-  assert_contains "$output" "| beta | vanilla | 1 | 1/1 | 40 | 8 | ~ |  | 0 | 0 | no |" "pricing incomplete renders as tilde"
-  assert_contains "$output" "| albion | 2 | 1/2 (50%) | 10 (n=1) | 10 (n=1) | 0.3 (n=1) | n/a (n=0) | 2/2 (100%) | 1/2 (50%) | 1/2 (50%) | 1/1 (100%) |" "albion aggregate row"
-  assert_contains "$output" "| vanilla | 2 | 2/2 (100%) | 30 (n=2) | 30 (n=2) | 0.6 (n=1) | n/a (n=0) | 0/2 (0%) | 0/2 (0%) | 0/2 (0%) | 2/2 (100%) |" "vanilla aggregate excludes incomplete cost"
+  assert_contains "$output" "Date range: 2026-07-04T10:00:00Z to 2026-07-04T10:40:00Z" "report date range"
+  assert_contains "$output" "| alpha | albion | 1 | 1/1 | 10 | 4 | 0.3 |  | 0 | 0 | yes | n/a |" "v1 alpha albion row renders n/a evidence"
+  assert_contains "$output" "| beta | vanilla | 1 | 1/1 | 40 | 8 | ~ |  | 0 | 0 | no | n/a |" "pricing incomplete renders as tilde"
+  assert_contains "$output" "| gamma | albion | 1 | 1/1 | 50 | 3 | 0.9 |  | 0 | 0 | yes | 1/1 (100%) |" "v2 evidence row"
+  assert_contains "$output" "| albion | 3 | 2/3 (66.667%) | 30 (n=2) | 30 (n=2) | 0.6 (n=2) | n/a (n=0) | 3/3 (100%) | 1/1 (100%) | 1/3 (33.333%) | 1/3 (33.333%) | 2/2 (100%) |" "albion aggregate row counts only v2 evidence"
+  assert_contains "$output" "| vanilla | 2 | 2/2 (100%) | 30 (n=2) | 30 (n=2) | 0.6 (n=1) | n/a (n=0) | 0/2 (0%) | 0/0 (n/a) | 0/2 (0%) | 0/2 (0%) | 2/2 (100%) |" "vanilla aggregate excludes incomplete cost and v1 evidence"
   assert_contains "$output" "Single-digit n supports direction, not statistical significance" "honest notes include small-n warning"
   assert_contains "$output" "- beta: albion 0/1, vanilla 1/1" "solved disagreement named"
-  assert_contains "$output" "- bad-schema/run-record.json: schema mismatch (expected albion-bench-run/v1)" "schema mismatch is listed"
+  assert_contains "$output" "- bad-schema/run-record.json: schema mismatch (expected albion-bench-run/v1 or albion-bench-run/v2)" "schema mismatch is listed"
   assert_contains "$output" "- alpha x albion: n=1" "cell n is listed"
   assert_contains "$output" "solve_rate" "solve rate denominators are explicit"
+  assert_contains "$output" "evidence_complete_rate" "evidence rate column is present"
 }
 
 test_report_out_writes_file() {
@@ -167,7 +204,7 @@ test_report_out_writes_file() {
 
   assert_file_exists "$out_file" "report writes --out file"
   assert_contains "$(cat "$out_file")" "# Albion Bench Report" "written report has header"
-  assert_contains "$(cat "$out_file")" "| beta | albion | 1 | 0/1 | 30 | 9 |  | 0.5 | 1 | 2 | yes |" "plan lane cost column is populated"
+  assert_contains "$(cat "$out_file")" "| beta | albion | 1 | 0/1 | 30 | 9 |  | 0.5 | 1 | 2 | yes | n/a |" "plan lane cost column is populated"
 }
 
 test_report_stdout_contains_expected_values

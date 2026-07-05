@@ -175,12 +175,59 @@ def run_verify(task_dir: Path, workspace: Path, out_dir: Path) -> int:
     return result.returncode
 
 
-def workbench_present(workspace: Path) -> bool:
-    fable_root = workspace / ".agent-workbench" / "fable-mode"
+def file_has_content(path: Path) -> bool:
     try:
-        return fable_root.is_dir() and any(path.is_dir() and path.name != "lessons" for path in fable_root.iterdir())
+        return path.read_text(encoding="utf-8", errors="replace").strip() != ""
     except OSError:
         return False
+
+
+def workbench_record(workspace: Path) -> dict[str, object]:
+    fable_root = workspace / ".agent-workbench" / "fable-mode"
+    task_dirs: list[Path] = []
+    if fable_root.is_dir():
+        try:
+            task_dirs = sorted(
+                (path for path in fable_root.iterdir() if path.is_dir() and path.name != "lessons"),
+                key=lambda path: path.name,
+            )
+        except OSError:
+            task_dirs = []
+
+    tasks: list[dict[str, object]] = []
+    for task_dir in task_dirs:
+        try:
+            direct_files = sorted((path for path in task_dir.iterdir() if path.is_file()), key=lambda path: path.name)
+        except OSError:
+            direct_files = []
+        files: list[dict[str, object]] = []
+        for path in direct_files:
+            try:
+                byte_size = path.stat().st_size
+            except OSError:
+                continue
+            files.append({"name": path.name, "bytes": byte_size})
+        tasks.append({"slug": task_dir.name, "files": files})
+
+    lessons_root = fable_root / "lessons"
+    lessons_file_count = 0
+    if lessons_root.is_dir():
+        try:
+            lessons_file_count = sum(1 for path in lessons_root.rglob("*") if path.is_file())
+        except OSError:
+            lessons_file_count = 0
+
+    engaged = len(task_dirs) > 0
+    evidence_complete = engaged and all(
+        file_has_content(task_dir / "task.md") and file_has_content(task_dir / "verification.md")
+        for task_dir in task_dirs
+    )
+    return {
+        "engaged": engaged,
+        "evidence_complete": evidence_complete,
+        "tasks": tasks,
+        "lessons_file_count": lessons_file_count,
+    }
 
 
 def metrics_record(args: Args, workspace: Path, result_path: Path) -> dict[str, object]:
@@ -203,15 +250,17 @@ def metrics_record(args: Args, workspace: Path, result_path: Path) -> dict[str, 
 
 def write_run_record(args: Args, workspace: Path, started_at: str, started: float, verify_exit: int) -> None:
     result_path = args.out_dir / "result.json"
+    workbench = workbench_record(workspace)
     record = {
-        "schema": "albion-bench-run/v1",
+        "schema": "albion-bench-run/v2",
         "task_id": task_id(args.task_dir),
         "arm": args.arm,
         "solved": verify_exit == 0,
         "verify_exit": verify_exit,
         "metrics": metrics_record(args, workspace, result_path),
         "manifest": read_json_object(workspace / ".albion" / "completion-manifest.json"),
-        "workbench_present": workbench_present(workspace),
+        "workbench_present": workbench["engaged"],
+        "workbench": workbench,
         "started_at": started_at,
         "wall_seconds": int(time.monotonic() - started),
     }

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 
-BENCH_SCHEMA = "albion-bench-run/v1"
+BENCH_SCHEMAS = {"albion-bench-run/v1", "albion-bench-run/v2"}
 METRICS_SCHEMA = "albion-task-metrics/v1"
 LANE_COLUMNS = {
     "api": ("cost_api_usd", "usd"),
@@ -37,6 +37,7 @@ class RunRecord:
     gate_blocks: int | None
     strikes: int | None
     workbench_present: bool
+    evidence_complete: bool | None
     manifest_last_test: str | None
 
 
@@ -85,8 +86,9 @@ def load_record(root: Path, path: Path) -> RunRecord | SkippedRecord:
     except (OSError, json.JSONDecodeError) as error:
         return SkippedRecord(path, f"schema mismatch ({error})")
 
-    if not isinstance(raw, dict) or raw.get("schema") != BENCH_SCHEMA:
-        return SkippedRecord(path, f"schema mismatch (expected {BENCH_SCHEMA})")
+    if not isinstance(raw, dict) or raw.get("schema") not in BENCH_SCHEMAS:
+        expected = " or ".join(sorted(BENCH_SCHEMAS))
+        return SkippedRecord(path, f"schema mismatch (expected {expected})")
 
     metrics = raw.get("metrics")
     if not isinstance(metrics, dict) or metrics.get("schema") != METRICS_SCHEMA:
@@ -123,6 +125,11 @@ def load_record(root: Path, path: Path) -> RunRecord | SkippedRecord:
     if not isinstance(manifest_last_test, str):
         manifest_last_test = None
 
+    workbench = raw.get("workbench")
+    evidence_complete = workbench.get("evidence_complete") if isinstance(workbench, dict) else None
+    if not isinstance(evidence_complete, bool):
+        evidence_complete = None
+
     return RunRecord(
         path=path,
         task_id=task_id,
@@ -138,6 +145,7 @@ def load_record(root: Path, path: Path) -> RunRecord | SkippedRecord:
         strikes=as_int(metrics.get("strikes")),
         workbench_present=raw.get("workbench_present") is True
         or metrics.get("workbench_present") is True,
+        evidence_complete=evidence_complete,
         manifest_last_test=manifest_last_test,
     )
 
@@ -183,6 +191,13 @@ def table(headers: list[str], rows: list[list[object]]) -> list[str]:
 
 def positive(value: int | None) -> bool:
     return value is not None and value > 0
+
+
+def evidence_display(records: list[RunRecord]) -> str:
+    eligible = [record for record in records if record.evidence_complete is not None]
+    if not eligible:
+        return "n/a"
+    return fmt_rate(sum(1 for record in eligible if record.evidence_complete), len(eligible))
 
 
 def lane_column(lane: str) -> tuple[str, str]:
@@ -259,13 +274,26 @@ def summarize(records: list[RunRecord], skipped: list[SkippedRecord], root: Path
                 max(gate_values) if gate_values else "n/a",
                 max(strike_values) if strike_values else "n/a",
                 "yes" if any(record.workbench_present for record in cell_records) else "no",
+                evidence_display(cell_records),
             ]
         )
         per_task_rows.append(row)
 
     lines.extend(
         table(
-            ["task_id", "arm", "n", "solved", "wall_seconds_mean", "turns_mean", *cost_headers, "gate_blocks", "strikes", "workbench"],
+            [
+                "task_id",
+                "arm",
+                "n",
+                "solved",
+                "wall_seconds_mean",
+                "turns_mean",
+                *cost_headers,
+                "gate_blocks",
+                "strikes",
+                "workbench",
+                "evidence",
+            ],
             per_task_rows,
         )
     )
@@ -279,6 +307,7 @@ def summarize(records: list[RunRecord], skipped: list[SkippedRecord], root: Path
         "wall_seconds_median_solved",
         *[f"{lane_column(lane)[0]}_mean_solved" for lane in lanes],
         "workbench_rate",
+        "evidence_complete_rate",
         "gate_block_incidence",
         "strike_incidence",
         "last_test_fidelity",
@@ -296,6 +325,7 @@ def summarize(records: list[RunRecord], skipped: list[SkippedRecord], root: Path
                 if record.lane == lane and record.cost_value is not None and not record.pricing_incomplete
             ]
             cost_means.append(fmt_mean(values))
+        evidence_records = [record for record in arm_records if record.evidence_complete is not None]
         aggregate_rows.append(
             [
                 arm,
@@ -305,6 +335,7 @@ def summarize(records: list[RunRecord], skipped: list[SkippedRecord], root: Path
                 fmt_median(solved_walls),
                 *cost_means,
                 fmt_rate(sum(1 for record in arm_records if record.workbench_present), len(arm_records)),
+                fmt_rate(sum(1 for record in evidence_records if record.evidence_complete), len(evidence_records)),
                 fmt_rate(sum(1 for record in arm_records if positive(record.gate_blocks)), len(arm_records)),
                 fmt_rate(sum(1 for record in arm_records if positive(record.strikes)), len(arm_records)),
                 fmt_rate(sum(1 for record in solved_records if record.manifest_last_test == "pass"), len(solved_records)),
