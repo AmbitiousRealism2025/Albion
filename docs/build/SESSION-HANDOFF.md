@@ -8,31 +8,43 @@ This is the rehydration document for a new conductor session. It exists because 
 
 ## [LIVE] Where we are right now
 
-**Date of handoff:** 2026-07-05 (M3–M5 sealed, M6 substantially complete — all one session)
-**Milestone complete:** **M6 — substantially complete** (build log 015): `install.sh` fresh-machine installer, hook-registration smoke-check (`tests/tools/verify-registration.sh`, live-PASS — closes the inert-hooks class), effort-default fix (doctor `effort` check), CI SHA-pinned + least-privilege, community files + CHANGELOG. Remaining M6 step = the plugin-marketplace **publish** itself (externally gated, needs maintainer account). Suite = 28 files green. **Coexistence + self-containment done (build log 016):** every hook gates on ALBION_ACTIVE (inert in stock claude even if globally enabled); effort scoped to albion sessions via --settings; `bin/albion-setup` (interactive creds); `ALBION_VISION_TOKEN`/`ALBION_VISION_LANE` (separate 4.6V key); `bin/albion-package` builds a single self-contained plugin dir carrying the launcher (launcher/doctor/hooks are layout-agnostic) — verified live: a session from the packaged dist registers+fires hooks. `docs/glm-5.2-setup.md` + `docs/packaging.md` written; README locked (completed-tense, coexistence section, milestone table moved to end).
-**THE IMPORTANT THING — design decisions queued for the maintainer** (from the log-014 long-horizon A/B diagnostic; NOT decided autonomously): (a) **re-scope/retire the workbench + SessionStart re-injection hook** — four long-horizon runs, zero workbench engagement; charter convergence prevents the compaction the re-injection hook exists to survive; a `--lite` charter A/B is the clean test. (b) **Keep the always-on task-tracking** — the one charter feature with a measured benefit (2.2× convergence at max effort). (c) **Fix the bench:** `--vanilla` is contaminated by the user-scope `fable-mode` skill (disable it for a true bare arm); build tasks that stress the enforcement layer, not read-only analysis. All log-014 findings are n=1 hypotheses awaiting repeated trials.
-**Next milestone:** **M7 — hardening** (provider abstraction, interactive conductor steering) — but the charter-design conversation above should happen first.
-**Conductor for the next session should be:** Fable 5.
-**Carry-forward facts:** (1) **Run at `xhigh`/GLM-max** — it is both better and faster for the charter arm (log 014); the doctor now warns if effortLevel isn't xhigh. (2) **Vision-lane verdict** (research report 11, local): plan tokens authorize direct GLM-4.6V via `api.z.ai/api/anthropic/v1/messages`; paas/v4 rejects plan tokens (429/1113); no MCP needed. (3) Worker sandbox pattern: `--permission-mode acceptEdits --allowedTools "Bash(<narrow>:*)"`, never bypassPermissions. (4) User key at `~/.albion/secrets.zsh` ← `~/.zshenv`. (5) Long-horizon A/B reports for a private repo kept off-repo at `~/Desktop/albion-factory-analysis/`.
+**Date of handoff:** 2026-07-05. **The system is built.** M0–M5 are sealed; M6 (release engineering) is complete except the plugin-marketplace **publish**, which is externally gated on the maintainer's account. Everything below is on `main`, CI-green, **28 test files** passing on macOS + ubuntu.
+**Conductor for the next session:** Fable 5.
 
-### What is done and merged (all CI-green, on `main`)
-- **M0** research + proposal (v0.2), including live wire-probes against the Z.ai endpoint.
-- **M1** launcher + doctor: `bin/albion` (default/`--vanilla`/`--doctor`/`--dry-run`, both auth lanes, `--model glm-5.2[1m]` pin), `bin/albion-doctor` (check registry + `--live` probe, verified `HTTP 200 model=glm-5.2`), `env/albion-env.sh`.
-- **M2** enforcement layer: session-state JSON engine (`state/`), six hooks in `plugin/scripts/` — destructive-command guard, strike counter, workbench scrubber, Stop completion gate (keystone), SessionStart re-injection — all hardened after an adversarial red-team (build log 007), wired in `plugin/hooks/hooks.json`, verified by the doctor's `hook-suite` check. `docs/security-model.md` states the honest threat model.
-- **M3** behavioral layer: `charter/ALBION.md` (conductor-written, maintainer-approved, compiled from `manifest/sections/` by `bin/albion-compile` with a `--check` drift gate), four crown-jewel skills + vendored fable-mode skill (`plugin/skills/`), five agents (`plugin/agents/`), `plugin.json`, launcher `--plugin-dir` wiring (default mode only), doctor `manifest` check. Workbench layout everywhere is the per-task-directory form the hooks enforce (`.agent-workbench/fable-mode/<task-slug>/`).
-- Test suite: zero-dependency, 16 files, green on macOS **and** ubuntu; CI (shellcheck + tests) on every push.
+### Full inventory of what is built & merged (all CI-green)
+- **Launcher** `bin/albion` — modes: default / `--vanilla` (bare-GLM A/B control) / `--doctor` / `--dry-run`; both auth lanes; pins `--model glm-5.2[1m]`; injects the charter (`--append-system-prompt`), the plugin (`--plugin-dir`, default mode only), and a scoped effort config (`--settings config/albion-settings.json`); exports `ALBION_ACTIVE=1` when the plugin loads.
+- **Doctor** `bin/albion-doctor` — check registry (env, claude-binary, version, endpoint-shape, tmux, fixtures, hook-suite, manifest, vision, effort) + `--live` (1-token probe, verified `HTTP 200 model=glm-5.2`).
+- **Enforcement layer** (`state/` engine + 6 hooks in `plugin/scripts/`): destructive-command guard, strike counter, workbench scrubber, **Stop completion gate** (keystone; writes the completion-manifest done-signal), SessionStart re-injection, image-read interception. **All 6 gate on `ALBION_ACTIVE`** (inert in stock claude). Wired in `plugin/hooks/hooks.json` (string-form commands — array-form was silently ignored, log 012). Live registration proven by `tests/tools/verify-registration.sh`.
+- **Charter** `charter/ALBION.md` — compiled from `manifest/sections/` by `bin/albion-compile` (`--check` drift gate).
+- **Skills** (`plugin/skills/`): maturity-assessment, delegation, recovery, completion-gate, conductor, + vendored standalone fable-mode. **Agents** (`plugin/agents/`): scout, counterexample-hunter, verifier, simplifier, quick.
+- **Vision** `bin/albion-vision` — direct GLM-4.6V, both lanes, no MCP; `ALBION_VISION_TOKEN`/`ALBION_VISION_LANE` for a separate metered 4.6V key.
+- **Telemetry** `telemetry/albion-metrics` (dual cost model; harness `total_cost_usd` proven ~2.7× overstated). **Bench** `bench/run-task` + `bench/report` + a 6-task corpus; first A/B report at `bench/reports/m5-first-ab-report.md`.
+- **Distribution:** `install.sh` (fresh-machine, symlinks the tools), `bin/albion-setup` (interactive creds → mode-600 secrets), `bin/albion-package` (builds a **self-contained plugin** dir carrying the launcher; launcher/doctor/hooks are layout-agnostic — verified live from the packaged dist). CI is SHA-pinned + least-privilege; community files + CHANGELOG in place.
+- **Docs:** README (locked, completed-tense, coexistence section, milestone trail at end), `docs/glm-5.2-setup.md`, `docs/packaging.md`, `docs/security-model.md`, `docs/build/orchestration.md`, build logs 000–016.
 
-### What to do next (first steps)
-1. **Run the M3 exit test** (needs the user-held Z.ai token): launch `bin/albion` on a scratch long-horizon task; verify the full loop end-to-end — workbench task dir with populated `task.md`/`verification.md`, hook injections, stop gate honest, report in charter §8 form. Then seal M3 in a short log entry.
-2. **M4 packet breakdown** per proposal §6 (vision: provider registry, `albion-vision`, image-read hook) and §7 (Conductor skill + completion-manifest protocol). Get maintainer approval on the packet plan before dispatching.
+### >>> THE MOST IMPORTANT THING: design decisions queued for the maintainer <<<
+From the **log-014** long-horizon A/B diagnostic (4 runs on a real 350k-LOC repo; reports at `~/Desktop/albion-factory-analysis/`). These are **n=1 hypotheses NOT to act on autonomously** — they were explicitly left for the maintainer:
+- **(a) Re-scope or retire the workbench + SessionStart re-injection hook.** The external workbench engaged in **zero** of four long-horizon runs; the charter's convergence prevents the compaction the re-injection hook exists to survive; and when compaction *did* happen (vanilla arm), native handling preserved the findings anyway. Clean test: a **`--lite` charter A/B** (trivial via the compile pipeline — drop the workbench/loop scaffolding, keep the contract + intent gate + task-tracking).
+- **(b) Keep the always-on task-tracking.** It is the *one* charter feature with a measured benefit — at max effort the charter arm converged **2.2× faster** (15 vs 33 min) because task-tracking gives GLM a definition of "done"; the skill-only arm sprawled and compacted.
+- **(c) Fix the bench methodology.** The `--vanilla` control auto-loads the user-scope `fable-mode` skill (so it's *skill-only*, not bare) — disable it for a true bare arm. And build tasks that stress the **enforcement layer** (destructive actions, hidden-acceptance-gate reward-hacking, multi-session) rather than read-only analysis, which exercises none of it.
 
-### Open threads / backlog
-- **Hook hardening backlog** (documented, non-blocking) in `docs/security-model.md` and build log 007: runtime-obfuscation gaps are inherent to denylists (do not attempt heuristic fixes); relocating `gate.blocks` outside agent-writable state is possible future work.
-- **Hook registration smoke-check** (from log 012): nothing tests that Claude Code actually *loads* the plugin hooks — add one cheap headless session with a marker hook so the inert-hooks class can't silently regress.
-- **Bench corpus is too easy** (log 013): both arms solve 6/6; the corpus can't yet discriminate the arms. The single most valuable next step for proving Albion's thesis is long-horizon / multi-file / unclear-cause tasks that exercise the workbench tier (which has *never* engaged solo across M3–M5).
-- **peak-window `last_test` miss** (log 013): a per-run state-write gap needing a dedicated repro; detection and write-path are both provably correct.
-- **CI actions are major-version-pinned**; SHA-pinning + the `actions/checkout@v4` Node-20 deprecation are M6 tasks.
-- **Worker-lane trust note (build log 010):** standing brief boilerplate "if an out-of-scope test breaks, STOP and report" is holding (record intact since ALB-016). Conductor must read *every hunk* of worker diffs and *every unit's exit code* (log 013's non-exec-setup catch).
+### What to do next
+1. **Publish the marketplace plugin** (maintainer step): `bin/albion-package` → upload `dist/albion`. Only the publish + `/plugin install` round-trip remains untested (needs the account).
+2. **Have the charter-design conversation** (the decisions above) — likely a `--lite` charter A/B — *before* M7.
+3. **M7 — hardening:** provider abstraction (data-sovereignty toggle), interactive conductor steering, lessons promotion.
+
+### Carry-forward facts (load-bearing)
+1. **Run at `xhigh`/GLM-max** — both better and faster for the charter arm (log 014). The launcher now self-enforces this via `config/albion-settings.json`, scoped to albion sessions (does NOT touch the user's global). The doctor `effort` check verifies the shipped config.
+2. **Coexistence is solved:** `albion` (GLM) and `claude` (Anthropic) run side by side with zero interference. Hooks gate on `ALBION_ACTIVE` (only the launcher sets it, default mode only). Never rely on that being set elsewhere.
+3. **Vision-lane verdict** (research report 11, local-only): plan tokens authorize direct GLM-4.6V via `api.z.ai/api/anthropic/v1/messages`; paas/v4 rejects plan tokens (429/1113); no MCP needed.
+4. **Worker sandbox pattern:** `--permission-mode acceptEdits --allowedTools "Bash(<narrow>:*)"`, **never** `bypassPermissions` (classifier-denied). Dispatch loop unchanged (see [STABLE] below).
+5. **User's Z.ai token** is at `~/.albion/secrets.zsh` (← `~/.zshenv`); the doctor `--live` works from any shell. Private long-horizon A/B reports at `~/Desktop/albion-factory-analysis/` (kept off the public repo).
+6. **Standing worker-lane rule (holding since the ALB-016 gamed-counter, log 010):** every brief carries "if an out-of-scope test breaks, STOP and report"; the conductor reads *every hunk* of worker diffs and *every unit's exit code*. **CI's shellcheck is stricter than this dev machine's** — watch for SC2015 (`A && B || C`); use explicit `if`.
+
+### Open threads / backlog (non-blocking)
+- **Hook hardening** (`docs/security-model.md`, log 007): denylist runtime-obfuscation gaps are inherent — do NOT attempt heuristic fixes; relocating `gate.blocks` outside agent-writable state is possible future work.
+- **peak-window `last_test` miss** (log 013): a per-run state-write gap; detection + write-path are both provably correct — needs a dedicated repro.
+- **CI actions** are now SHA-pinned (checkout@v5.0.0). Further SHA-pinning of any actions added later stays a pristine-repo habit.
 
 ---
 
@@ -75,4 +87,6 @@ This is the rehydration document for a new conductor session. It exists because 
 | Threat model | `docs/security-model.md` |
 | Conventions (read before coding) | `CONVENTIONS.md` |
 | Project memory (auto-loaded) | `~/.claude/projects/…/memory/` (indexed by `MEMORY.md`) |
-| Shipped code | `bin/`, `env/`, `state/`, `plugin/` |
+| Shipped code | `bin/` (albion, -doctor, -vision, -compile, -setup, -package), `env/`, `charter/`, `config/`, `manifest/`, `state/`, `plugin/`, `telemetry/`, `bench/` |
+| Distribution / setup docs | `docs/glm-5.2-setup.md`, `docs/packaging.md`; `install.sh` at repo root |
+| Vision-lane probe (local-only) | `docs/research/reports/11-glm-4.6v-plan-lane-probe.md` |
