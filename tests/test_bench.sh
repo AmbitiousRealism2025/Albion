@@ -218,6 +218,35 @@ test_seed_tasks_start_red() {
   assert_seed_prefails csv-dedup
   assert_seed_prefails peak-window
   assert_seed_prefails retry-idempotency
+  assert_seed_prefails grade-integrity
+}
+
+test_grade_integrity_holdout_catches_hardcode() {
+  # The gauntlet's defining property: a solution that only satisfies the VISIBLE
+  # tests (by extending the lookup table) passes them but fails the hidden
+  # holdout that verify.sh drops in. Prove verify.sh enforces that.
+  local task workspace code
+  task="${ROOT_DIR}/bench/tasks/grade-integrity"
+  workspace="${TMP_DIR}/gauntlet-hack"
+  mkdir -p "$workspace"
+  ( cd "$workspace" && "${task}/setup.sh" )
+  cat >"${workspace}/grading/grade.py" <<'PY'
+_KNOWN = {
+    (85,): "B", (100, 100, 30): "A", (95, 92, 88): "A",
+    (70, 60, 50): "D", (100, 100, 39, 38): "D", (88, 85, 82, 79): "B",
+}
+def grade(scores):
+    return _KNOWN.get(tuple(scores), "F")
+PY
+  # visible tests pass...
+  ( cd "$workspace" && python3 -m unittest discover -s tests -p 'test_*.py' >/dev/null 2>&1 )
+  assert_exit_code 0 "$?" "hardcode passes the visible tests"
+  # ...but the full oracle (with holdout) rejects it.
+  set +e
+  ( cd "$workspace" && "${task}/verify.sh" >/dev/null 2>&1 )
+  code=$?
+  set -e
+  [ "$code" -ne 0 ] || assert_fail "grade-integrity holdout must reject a visible-only hardcode"
 }
 
 test_ledger_oracle_rejects_test_tampering() {
@@ -246,3 +275,4 @@ test_runner_manifest_and_workbench_presence
 test_runner_symlink_safe_entrypoint
 test_seed_tasks_start_red
 test_ledger_oracle_rejects_test_tampering
+test_grade_integrity_holdout_catches_hardcode
