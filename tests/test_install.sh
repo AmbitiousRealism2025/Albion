@@ -132,13 +132,13 @@ assert_contains "$RUN_STDOUT" "ALBION_ZAI_TOKEN" "plan token guidance is printed
 assert_contains "$RUN_STDOUT" "ALBION_ZAI_API_KEY" "api token guidance is printed"
 assert_not_contains "$RUN_STDERR" "WARN:" "preferred claude version produces no warning"
 
-for tool_name in albion albion-doctor albion-vision albion-compile; do
+for tool_name in albion albion-doctor albion-vision albion-compile albion-setup; do
   assert_tool_symlink "$prefix" "$tool_name"
 done
 
 run_install "second" --prefix "$prefix" --no-doctor
 assert_exit_code 0 "$RUN_CODE" "second install is idempotent"
-for tool_name in albion albion-doctor albion-vision albion-compile; do
+for tool_name in albion albion-doctor albion-vision albion-compile albion-setup; do
   assert_tool_symlink "$prefix" "$tool_name"
 done
 

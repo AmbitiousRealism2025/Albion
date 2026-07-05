@@ -3,7 +3,7 @@ set -euo pipefail
 
 MIN_CLAUDE_VERSION="2.1.163"
 PREFERRED_CLAUDE_VERSION="2.1.195"
-TOOL_NAMES="albion albion-doctor albion-vision albion-compile"
+TOOL_NAMES="albion albion-doctor albion-vision albion-compile albion-setup"
 
 print_usage() {
   cat <<'USAGE'
