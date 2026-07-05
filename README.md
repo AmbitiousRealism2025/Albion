@@ -31,7 +31,18 @@ your stock Claude Code without touching it.
 
 ## Install
 
-From a fresh clone:
+**From the plugin marketplace** (inside Claude Code):
+
+```
+/plugin marketplace add AmbitiousRealism2025/albion-marketplace
+/plugin install albion@albion
+```
+
+Enabling the plugin puts the `albion` launcher on your PATH; set your Z.ai
+credential (`albion-setup` or `export ALBION_ZAI_TOKEN=...`), then run
+`albion-doctor --live` and `albion`.
+
+**Or from a fresh clone:**
 
 ```bash
 ./install.sh          # checks prerequisites, puts the tools on your PATH

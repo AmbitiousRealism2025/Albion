@@ -5,7 +5,11 @@ All notable changes to Albion are recorded here. This project adheres to
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- Published the plugin marketplace
+  ([AmbitiousRealism2025/albion-marketplace](https://github.com/AmbitiousRealism2025/albion-marketplace))
+  carrying the packaged v0.2.0 plugin; the README documents marketplace
+  install as the primary path.
 
 ## [0.2.0] — 2026-07-05
 

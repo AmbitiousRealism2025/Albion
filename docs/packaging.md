@@ -42,10 +42,15 @@ layout while `test_package.sh` exercises the packaged one.
 
 ## Distribute it
 
-- **Marketplace:** publish the packaged directory as the plugin. When enabled,
-  Claude Code adds its `bin/` to `PATH`, so `albion` is available; the hooks stay
-  inert in stock `claude` sessions (they gate on `ALBION_ACTIVE`, which only the
-  `albion` launcher sets — see the README's coexistence section).
+- **Marketplace:** the packaged directory is published at
+  [AmbitiousRealism2025/albion-marketplace](https://github.com/AmbitiousRealism2025/albion-marketplace)
+  (`/plugin marketplace add AmbitiousRealism2025/albion-marketplace`, then
+  `/plugin install albion@albion`). When enabled, Claude Code adds its `bin/`
+  to `PATH`, so `albion` is available; the hooks stay inert in stock `claude`
+  sessions (they gate on `ALBION_ACTIVE`, which only the `albion` launcher
+  sets — see the README's coexistence section). On each release, rebuild with
+  `bin/albion-package` and refresh the marketplace repo's `plugins/albion/`
+  copy and manifest version.
 - **Direct:** `claude --plugin-dir /path/to/dist/albion`, or run the bundled
   launcher `/path/to/dist/albion/bin/albion` directly.
 
