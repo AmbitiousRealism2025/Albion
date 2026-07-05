@@ -35,9 +35,11 @@ an MIT-licensed, open-source configuration layer. The pieces:
 
 ## Current state
 
-The system is **built and green**. Milestones M0 through M6 are complete except
-one externally-gated step: publishing the packaged plugin to the marketplace,
-which needs the maintainer's own account. Everything is on the `main` branch,
+The system is **built, green, and released**: version 0.2.0 is tagged on
+GitHub with an installable package attached, and the plugin marketplace is
+published (`AmbitiousRealism2025/albion-marketplace`) — all milestones are
+complete. The one thing never yet verified is the install round-trip from a
+user's machine (two commands; the maintainer has the instructions). Everything is on the `main` branch,
 the continuous-integration checks pass, and there are about 30 automated tests
 covering the launcher, the configuration compiler, the hooks, the evaluation
 harness, and packaging. Two setups can run side by side with no interference:
