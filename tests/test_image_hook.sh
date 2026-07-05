@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# These tests exercise the hooks' ACTIVE behavior (as if launched by bin/albion).
+export ALBION_ACTIVE=1
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${TMPDIR:-/tmp}/albion-test-image-hook.$$"
 HOOK="${ROOT_DIR}/plugin/scripts/image-read-intercept.sh"

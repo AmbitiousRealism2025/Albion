@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# These tests exercise the hooks' ACTIVE behavior (as if launched by bin/albion).
+export ALBION_ACTIVE=1
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_ROOT="${TMPDIR:-/tmp}"
 TMP_DIR="${TMP_ROOT%/}/albion-test-inject.$$"

@@ -139,6 +139,7 @@ run_hook() {
 
   set +e
   CLAUDE_PLUGIN_ROOT="$PLUGIN_ROOT" \
+    ALBION_ACTIVE=1 \
     ALBION_STATE_DIR="$state_dir" \
     ALBION_WORKBENCH_ROOT="$workbench_root" \
     ALBION_GUARD_LOG="${TMP_DIR}/${hook_name}.guard.log" \

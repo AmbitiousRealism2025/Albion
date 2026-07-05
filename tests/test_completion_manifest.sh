@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# These tests exercise the hooks' ACTIVE behavior (as if launched by bin/albion).
+export ALBION_ACTIVE=1
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/albion-completion-manifest.XXXXXX")"
 HOOK_SCRIPT="${ROOT_DIR}/plugin/scripts/stop-gate.sh"

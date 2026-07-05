@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Coexistence gate: this hook stays inert unless the session was launched by
+# bin/albion, which exports ALBION_ACTIVE=1. This keeps Albion's enforcement
+# from firing in stock Claude sessions even if the plugin is enabled globally.
+[ -n "${ALBION_ACTIVE:-}" ] || exit 0
+
 DENY_REASON=""
 
 log_guard() {

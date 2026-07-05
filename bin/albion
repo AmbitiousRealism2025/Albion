@@ -239,6 +239,13 @@ main() {
   resolve_model
   resolve_charter
   resolve_plugin_dir
+  # Mark the session Albion-active only when the plugin is actually loaded.
+  # The plugin's hooks gate on this marker, so a globally-enabled Albion plugin
+  # stays inert in stock `claude` sessions and in `albion --vanilla` (both leave
+  # plugin_dir empty), giving clean coexistence with stock Claude Code.
+  if [ -n "$plugin_dir" ]; then
+    export ALBION_ACTIVE=1
+  fi
   build_final_argv
 
   if [ "$dry_run" -eq 1 ]; then
