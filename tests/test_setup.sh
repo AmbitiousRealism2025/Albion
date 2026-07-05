@@ -15,7 +15,9 @@ assert_not_contains() {
   case "$1" in *"$2"*) assert_fail "${3:-should not contain}: contains '${2}'"; return 1 ;; esac
 }
 
-file_mode() { stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1"; }
+file_mode() {
+  python3 -c 'import os,stat,sys; print(oct(stat.S_IMODE(os.stat(sys.argv[1]).st_mode))[2:])' "$1"
+}
 
 # --help
 set +e; "$TOOL" --help >/dev/null 2>&1; code=$?; set -e
@@ -48,7 +50,7 @@ printf 'api\nk1\ny\nk2\napi\n' | "$TOOL" --secrets-file "$sf" >/dev/null 2>&1
 sf="${TMP_DIR}/empty.sh"
 set +e; printf 'plan\n\n' | "$TOOL" --secrets-file "$sf" >/dev/null 2>&1; code=$?; set -e
 assert_eq "1" "$code" "empty token aborts"
-[ -f "$sf" ] && assert_fail "no file written on empty token" || true
+if [ -f "$sf" ]; then assert_fail "no file written on empty token"; fi
 
 # an invalid lane is rejected
 set +e; printf 'bogus\n' | "$TOOL" --secrets-file "${TMP_DIR}/bad.sh" >/dev/null 2>&1; code=$?; set -e
