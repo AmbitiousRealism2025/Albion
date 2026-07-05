@@ -6,12 +6,20 @@ All notable changes to Albion are recorded here. This project adheres to
 ## [Unreleased]
 
 ### Added
-- One-command fresh-machine installer (`install.sh`).
+- One-command fresh-machine installer (`install.sh`) and `bin/albion-setup`, an
+  interactive credential configurator (hidden input, mode-600 secrets file).
+- **Coexistence with stock Claude Code**: every plugin hook now gates on an
+  `ALBION_ACTIVE` marker that only the `albion` launcher sets, so the plugin is
+  inert in stock `claude` sessions even when enabled globally; and Albion's
+  `xhigh` effort is scoped to its own sessions via `--settings` rather than the
+  user's global config.
+- Dedicated vision credential/lane: `ALBION_VISION_TOKEN` and `ALBION_VISION_LANE`
+  let a metered user point GLM-4.6V at a separate key or lane from the main model.
 - Hook **registration** smoke-check — verifies Claude Code actually loads the
   plugin hooks, not just that the scripts run when invoked directly.
 - GitHub community files: issue forms, pull-request template, `CODEOWNERS`,
-  `CONTRIBUTING.md`, `SECURITY.md`.
-- `albion-doctor` **effort** check — warns when the resolved `effortLevel` is not
+  `CONTRIBUTING.md`, `SECURITY.md`; and a [GLM-5.2 setup guide](docs/glm-5.2-setup.md).
+- `albion-doctor` **effort** check — verifies Albion's shipped effort config is
   `xhigh` (GLM-max), the depth Albion's design requires.
 
 ### Changed
