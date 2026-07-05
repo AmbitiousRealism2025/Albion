@@ -3,6 +3,8 @@
 [![CI](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml/badge.svg)](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+https://github.com/user-attachments/assets/df653b40-7605-4022-a802-2dd6d136db2c
+
 **A GLM-5.2 orchestration system for Claude Code, built around fable-mode.**
 
 Albion is the successor to [Atreides](https://github.com/AmbitiousRealism2025/Atreides). Where Atreides was prompt-injected orchestration for Anthropic Claude, Albion is a complete operating environment for Claude Code running **Z.ai's GLM-5.2** as the main model: a behavioral charter compiled into the system prompt, deterministic hooks as the enforcement layer, a delegation roster, and a pluggable vision subsystem.
