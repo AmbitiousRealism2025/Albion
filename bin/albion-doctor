@@ -649,14 +649,13 @@ check_effort() {
   local settings_path
   local effort
 
-  settings_path="${ALBION_SETTINGS_PATH:-${HOME:-}/.claude/settings.json}"
-  # Speak only when a settings file is actually resolvable. In a hermetic
-  # environment with no HOME the path collapses to /.claude/settings.json;
-  # stay silent there rather than emit a misleading result.
-  case "$settings_path" in
-    /.claude/settings.json) return 0 ;;
-  esac
-  [ -r "$settings_path" ] || return 0
+  # The launcher injects this settings file via --settings, so it (not the
+  # user's global settings.json) determines Albion's session effort. Verify it.
+  settings_path="${ALBION_SETTINGS_PATH:-${repo_root}/config/albion-settings.json}"
+  if [ ! -r "$settings_path" ]; then
+    record_check "SKIP" "effort" "albion settings not found at ${settings_path}"
+    return 0
+  fi
 
   effort="$(python3 - "$settings_path" <<'PY'
 import json, sys
@@ -671,9 +670,9 @@ PY
   if [ "$effort" = "xhigh" ]; then
     record_check "PASS" "effort" "effortLevel=xhigh (GLM-max) in ${settings_path}"
   elif [ -z "$effort" ]; then
-    record_check "WARN" "effort" "effortLevel unset in ${settings_path}; Albion expects xhigh (GLM-max, full-depth main agent) — set it via /effort xhigh"
+    record_check "WARN" "effort" "effortLevel unset in ${settings_path}; Albion expects xhigh (GLM-max, full-depth main agent)"
   else
-    record_check "WARN" "effort" "effortLevel=${effort} in ${settings_path}; Albion expects xhigh (GLM-max) — the main agent should reason at full depth; set it via /effort xhigh"
+    record_check "WARN" "effort" "effortLevel=${effort} in ${settings_path}; Albion expects xhigh (GLM-max) — the main agent should reason at full depth"
   fi
 }
 

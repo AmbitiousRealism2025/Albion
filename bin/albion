@@ -168,6 +168,25 @@ resolve_plugin_dir() {
   fi
 }
 
+resolve_settings() {
+  local candidate
+
+  # Scope Albion's effort default (xhigh -> GLM-max) to albion sessions via a
+  # merged --settings layer, so it never dictates the user's stock-claude effort.
+  # Default mode only; vanilla stays bare and uses the ambient default.
+  if [ "$mode" = "vanilla" ]; then
+    settings_path=""
+    return 0
+  fi
+
+  candidate="${repo_root}/config/albion-settings.json"
+  if [ -f "$candidate" ]; then
+    settings_path="$(cd -P "$(dirname "$candidate")" && pwd)/$(basename "$candidate")"
+  else
+    settings_path=""
+  fi
+}
+
 build_final_argv() {
   final_argv=("claude")
 
@@ -177,6 +196,10 @@ build_final_argv() {
 
   if [ -n "$plugin_dir" ]; then
     final_argv+=("--plugin-dir" "$plugin_dir")
+  fi
+
+  if [ -n "$settings_path" ]; then
+    final_argv+=("--settings" "$settings_path")
   fi
 
   if [ "$model_injected" -eq 1 ]; then
@@ -198,6 +221,7 @@ main() {
   local dry_run
   local charter_path
   local plugin_dir
+  local settings_path
   local resolved_model
   local model_injected
   local -a passthrough
@@ -212,6 +236,7 @@ main() {
   dry_run=0
   charter_path=""
   plugin_dir=""
+  settings_path=""
   resolved_model=""
   model_injected=0
   passthrough=()
@@ -239,6 +264,7 @@ main() {
   resolve_model
   resolve_charter
   resolve_plugin_dir
+  resolve_settings
   # Mark the session Albion-active only when the plugin is actually loaded.
   # The plugin's hooks gate on this marker, so a globally-enabled Albion plugin
   # stays inert in stock `claude` sessions and in `albion --vanilla` (both leave

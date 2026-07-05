@@ -52,9 +52,9 @@ printf '{"tui":"fullscreen"}\n' >"${TMP_DIR}/unset.json"
 out="$(run_doctor_with_settings "${TMP_DIR}/unset.json")"
 assert_contains "$out" "WARN effort: effortLevel unset" "missing effortLevel warns"
 
-# unreadable settings -> silent (no effort line at all)
+# unreadable settings -> SKIP (the albion config is missing)
 out="$(run_doctor_with_settings "${TMP_DIR}/does-not-exist.json")"
-assert_not_contains "$out" "effort:" "unresolvable settings emits no effort line"
+assert_contains "$out" "SKIP effort:" "unresolvable settings skips the effort check"
 
 # the summary tally must still equal the count of PASS lines (no counter drift)
 out="$(run_doctor_with_settings "${TMP_DIR}/xhigh.json")"
