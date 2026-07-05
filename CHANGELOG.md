@@ -6,6 +6,12 @@ All notable changes to Albion are recorded here. This project adheres to
 ## [Unreleased]
 
 ### Added
+- **Self-contained plugin packaging** (`bin/albion-package`): assembles a single
+  marketplace-ready directory that is both a valid Claude Code plugin and a
+  complete Albion install (it carries the launcher, `env/`, `charter/`, `config/`,
+  and `state/`). The launcher, doctor, and hooks resolve paths in both the dev and
+  packaged layouts. Verified live: a session launched from the package registers
+  and fires its hooks.
 - One-command fresh-machine installer (`install.sh`) and `bin/albion-setup`, an
   interactive credential configurator (hidden input, mode-600 secrets file).
 - **Coexistence with stock Claude Code**: every plugin hook now gates on an

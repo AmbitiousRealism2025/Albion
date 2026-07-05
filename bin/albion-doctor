@@ -251,7 +251,7 @@ check_hook_suite() {
   local output
   local verify_hooks
 
-  verify_hooks="${repo_root}/plugin/scripts/verify-hooks.sh"
+  verify_hooks="${plugin_root}/scripts/verify-hooks.sh"
   if [ ! -x "$verify_hooks" ]; then
     record_check "FAIL" "hook-suite" "verification runner missing or not executable at ${verify_hooks}"
     return 0
@@ -274,10 +274,12 @@ check_manifest() {
 
   compiler="${repo_root}/bin/albion-compile"
   version_manifest="${repo_root}/manifest/albion-manifest.yaml"
-  plugin_manifest="${repo_root}/plugin/.claude-plugin/plugin.json"
+  plugin_manifest="${plugin_root}/.claude-plugin/plugin.json"
 
-  if [ ! -f "$compiler" ]; then
-    record_check "SKIP" "manifest" "compiler missing at ${compiler}"
+  if [ ! -f "$compiler" ] || [ ! -f "$version_manifest" ]; then
+    # A packaged (self-contained) plugin ships the compiled charter without the
+    # manifest source, so there is nothing to re-compile-and-diff here.
+    record_check "SKIP" "manifest" "no manifest source (packaged plugin) or compiler missing"
     return 0
   fi
 
@@ -707,6 +709,13 @@ main() {
 
   script_dir="$(resolve_script_dir)"
   repo_root="$(cd "${script_dir}/.." && pwd)"
+  # Locate the plugin root in either layout: self-contained (repo_root IS the
+  # plugin) or dev/clone (plugin is a subdirectory).
+  if [ -f "${repo_root}/.claude-plugin/plugin.json" ]; then
+    plugin_root="$repo_root"
+  else
+    plugin_root="${repo_root}/plugin"
+  fi
   env_script="${repo_root}/env/albion-env.sh"
   fixture_validator="${repo_root}/tests/tools/capture/validate-fixtures.sh"
   fixtures_dir="${repo_root}/tests/fixtures/hooks"

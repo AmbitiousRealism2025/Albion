@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Assemble a self-contained Albion plugin directory for distribution (e.g. the
+# plugin marketplace). The output is a single directory that is BOTH a valid
+# Claude Code plugin (.claude-plugin/, hooks/, scripts/, skills/, agents/ at its
+# root) AND carries the launcher and everything it needs (bin/, env/, charter/,
+# config/, state/). Run from the installed result, `albion` works with nothing
+# else on disk.
+#
+# Usage: bin/albion-package [--out DIR]   (default: <repo>/dist/albion)
+
+resolve_script_dir() {
+  local src="${BASH_SOURCE[0]}"
+  while [ -h "$src" ]; do
+    local dir
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    case "$src" in /*) ;; *) src="${dir}/${src}" ;; esac
+  done
+  cd -P "$(dirname "$src")" && pwd
+}
+
+REPO="$(cd "$(resolve_script_dir)/.." && pwd)"
+OUT="${REPO}/dist/albion"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --out) [ "$#" -ge 2 ] || { echo 'ERROR: --out needs a directory' >&2; exit 2; }; OUT="$2"; shift 2 ;;
+    --out=*) OUT="${1#--out=}"; shift ;;
+    --help) sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+# The compiled charter must be current before we ship it.
+if [ -x "${REPO}/bin/albion-compile" ]; then
+  if ! "${REPO}/bin/albion-compile" --check >/dev/null 2>&1; then
+    echo 'ERROR: charter is out of sync with manifest/ — run bin/albion-compile first.' >&2
+    exit 1
+  fi
+fi
+
+rm -rf "$OUT"
+mkdir -p "$OUT"
+OUT="$(cd "$OUT" && pwd -P)"   # canonicalize (matches the launcher's cd -P resolution)
+echo "Packaging Albion into ${OUT}"
+
+# The plugin contents become the root of the distributable (flattened).
+cp -R "${REPO}/plugin/." "$OUT/"
+# The launcher and its runtime dependencies ride alongside.
+cp -R "${REPO}/bin" "${OUT}/bin"
+cp -R "${REPO}/env" "${OUT}/env"
+cp -R "${REPO}/config" "${OUT}/config"
+cp -R "${REPO}/state" "${OUT}/state"
+mkdir -p "${OUT}/charter"
+cp "${REPO}/charter/ALBION.md" "${OUT}/charter/ALBION.md"
+
+# Drop dev-only placeholders; keep everything runtime-relevant.
+find "$OUT" -name '.gitkeep' -delete 2>/dev/null || true
+
+# Sanity: the packaged launcher must resolve the plugin, charter, and settings
+# from inside the package (not the source repo).
+dry="$(ALBION_ZAI_TOKEN=package-probe "${OUT}/bin/albion" --dry-run 2>/dev/null || true)"
+for needle in "--plugin-dir ${OUT}" "${OUT}/config/albion-settings.json" "ALBION.md"; do
+  case "$dry" in
+    *"$needle"*) ;;
+    *) echo "ERROR: packaged launcher did not self-resolve ${needle}" >&2; exit 1 ;;
+  esac
+done
+
+echo "Packaged. The result is a self-contained plugin:"
+echo "  - install via the plugin marketplace, or"
+echo "  - point Claude Code at it: claude --plugin-dir ${OUT}"
+echo "  - or run the bundled launcher directly: ${OUT}/bin/albion"

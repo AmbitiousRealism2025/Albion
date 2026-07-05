@@ -215,6 +215,7 @@ main() {
   local payload
   local resolved_script_dir
   local state_lib
+  local _cand
   local parsed
   local session_id
   local source_name
@@ -226,9 +227,14 @@ main() {
     log_message "cannot resolve hook path"
     return 0
   }
-  state_lib="${resolved_script_dir}/../../state/state-lib.sh"
-  if [ ! -f "$state_lib" ]; then
-    log_message "missing state library: $state_lib"
+  # Find state-lib.sh in either layout: bundled inside a self-contained plugin
+  # (<root>/state) or the dev/clone layout (<repo>/state, one level higher).
+  state_lib=""
+  for _cand in "${resolved_script_dir}/../state/state-lib.sh" "${resolved_script_dir}/../../state/state-lib.sh"; do
+    if [ -f "$_cand" ]; then state_lib="$_cand"; break; fi
+  done
+  if [ -z "$state_lib" ]; then
+    log_message "missing state library under ${resolved_script_dir}"
     return 0
   fi
 

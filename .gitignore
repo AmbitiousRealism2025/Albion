@@ -21,3 +21,6 @@ docs/research/reports/
 
 # Logs
 *.log
+
+# Packaged self-contained plugin (build artifact)
+dist/

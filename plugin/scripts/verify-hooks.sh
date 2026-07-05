@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PLUGIN_ROOT="${ROOT_DIR}/plugin"
+# The plugin root is the parent of this script's own directory (scripts/), which
+# works in both layouts: dev (plugin/scripts/) and self-contained (<plugin>/scripts/).
+PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_JSON="${PLUGIN_ROOT}/hooks/hooks.json"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/albion-verify-hooks.XXXXXX")"
 RUN_STDOUT=""

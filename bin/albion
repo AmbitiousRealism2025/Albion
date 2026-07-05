@@ -159,6 +159,15 @@ resolve_plugin_dir() {
     return 0
   fi
 
+  # Self-contained install: the launcher lives inside the plugin directory
+  # itself (repo_root IS the plugin root), as produced by bin/albion-package
+  # for marketplace distribution.
+  if [ -f "${repo_root}/.claude-plugin/plugin.json" ]; then
+    plugin_dir="$repo_root"
+    return 0
+  fi
+
+  # Dev / clone layout: the plugin is a subdirectory of the repo.
   candidate="${repo_root}/plugin"
   if [ -d "$candidate" ]; then
     plugin_dir="$(cd -P "$candidate" && pwd)"

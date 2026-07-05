@@ -397,7 +397,6 @@ PY
 run_hook() {
   local payload
   local script_dir
-  local root_dir
   local state_lib
   local parsed
   local session_id
@@ -409,16 +408,21 @@ run_hook() {
   local reason
   local existing_blocks
   local next_blocks
+  local _cand
 
   payload="$(cat || true)"
   script_dir="$(resolved_script_dir)" || {
     log_line "stop-gate: cannot resolve hook path"
     return 0
   }
-  root_dir="$(cd "${script_dir}/../.." && pwd)"
-  state_lib="${root_dir}/state/state-lib.sh"
-  if [ ! -f "$state_lib" ]; then
-    log_line "stop-gate: missing state-lib.sh at ${state_lib}"
+  # Find state-lib.sh in either layout: bundled inside a self-contained plugin
+  # (<root>/state) or the dev/clone layout (<repo>/state, one level higher).
+  state_lib=""
+  for _cand in "${script_dir}/../state/state-lib.sh" "${script_dir}/../../state/state-lib.sh"; do
+    if [ -f "$_cand" ]; then state_lib="$_cand"; break; fi
+  done
+  if [ -z "$state_lib" ]; then
+    log_line "stop-gate: missing state-lib.sh under ${script_dir}"
     return 0
   fi
 

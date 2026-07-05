@@ -26,6 +26,8 @@ albion                # Claude Code on GLM-5.2 + charter + enforcement plugin
 
 `install.sh` symlinks `albion`, `albion-doctor`, `albion-vision`, `albion-compile`, and `albion-setup` into `~/.local/bin` (override with `--prefix DIR`) and prints the PATH line to add if needed. It never reads or writes a token. `albion-setup` prompts for your credential with hidden input and writes a mode-600 secrets file. New to running GLM-5.2 in Claude Code? See the [GLM-5.2 setup guide](docs/glm-5.2-setup.md).
 
+Albion also packages into a **single self-contained plugin directory** (`bin/albion-package`) that carries the launcher and everything it needs — the form used for marketplace distribution, where `albion` and stock `claude` coexist without interference (see [`docs/packaging.md`](docs/packaging.md)).
+
 ## Quickstart (without installing)
 
 Prerequisites: Claude Code ≥ 2.1.163 (2.1.195+ preferred), `bash`, `python3`, `curl`, and a Z.ai credential — a **Coding Plan** subscription token or a metered **API key**.
