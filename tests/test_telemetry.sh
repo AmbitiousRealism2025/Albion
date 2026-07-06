@@ -27,7 +27,11 @@ run_metrics() {
   err_file="${TMP_DIR}/${name}.err"
 
   set +e
-  "$METRICS" "$@" >"$out_file" 2>"$err_file"
+  # Isolate from any real workbench in the repo cwd: without this, the
+  # workbench_present assertions depend on whether the developer's checkout
+  # has live .agent-workbench content (found the hard way, ALB-031 review).
+  ALBION_WORKBENCH_ROOT="${TMP_DIR}/isolated-absent-workbench" \
+    "$METRICS" "$@" >"$out_file" 2>"$err_file"
   RUN_CODE=$?
   RUN_STDOUT="$(cat "$out_file")"
   RUN_STDERR="$(cat "$err_file")"

@@ -348,6 +348,81 @@ test_structured_trivial_flag_still_exempts_task() {
   assert_eq "" "$RUN_STDOUT" "structured trivial task is exempted"
 }
 
+test_unchecked_deliverables_on_nontrivial_workbench_task_blocks() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  local reason
+  session_id="stop-unchecked-deliverables"
+  state_dir="${TMP_DIR}/unchecked-deliverables.state"
+  workbench_root="${TMP_DIR}/unchecked-deliverables.workbench"
+  payload="$(payload_json "$session_id" false "The implementation is in progress.")"
+  make_workbench_task "$workbench_root" deliverable-task "- [ ] Implement the hook
+- [x] Verify the fixture
+* [ ] Update the regression coverage" "verification captured"
+
+  run_gate_in_state "unchecked-deliverables" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "unchecked deliverables gate exits zero"
+  assert_valid_block_json "$RUN_STDOUT"
+  reason="$(block_reason "$RUN_STDOUT")"
+  assert_contains "$reason" "2 unchecked deliverable(s) in task.md for workbench task \`deliverable-task\`" "unchecked deliverables reason names slug and count"
+}
+
+test_checked_deliverables_do_not_block() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  session_id="stop-checked-deliverables"
+  state_dir="${TMP_DIR}/checked-deliverables.state"
+  workbench_root="${TMP_DIR}/checked-deliverables.workbench"
+  payload="$(payload_json "$session_id" false "The implementation is in progress.")"
+  make_workbench_task "$workbench_root" checked-task "- [x] Implement the hook
+* [X] Update the regression coverage" "verification captured"
+
+  run_gate_in_state "checked-deliverables" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "checked deliverables gate exits zero"
+  assert_eq "" "$RUN_STDOUT" "checked deliverables do not block"
+}
+
+test_unchecked_deliverables_inside_fenced_code_are_ignored() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  session_id="stop-fenced-deliverables"
+  state_dir="${TMP_DIR}/fenced-deliverables.state"
+  workbench_root="${TMP_DIR}/fenced-deliverables.workbench"
+  payload="$(payload_json "$session_id" false "The implementation is in progress.")"
+  make_workbench_task "$workbench_root" fenced-task "Document the markdown example.
+\`\`\`markdown
+- [ ] This is only example markdown.
+\`\`\`
+- [x] Actual deliverable verified." "verification captured"
+
+  run_gate_in_state "fenced-deliverables" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "fenced deliverables gate exits zero"
+  assert_eq "" "$RUN_STDOUT" "unchecked deliverables inside fenced code do not block"
+}
+
+test_trivial_task_unchecked_deliverables_are_ignored() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  session_id="stop-trivial-unchecked"
+  state_dir="${TMP_DIR}/trivial-unchecked.state"
+  workbench_root="${TMP_DIR}/trivial-unchecked.workbench"
+  payload="$(payload_json "$session_id" false "The trivial task is complete.")"
+  make_workbench_task "$workbench_root" trivial-unchecked "trivial: true
+- [ ] This unchecked box is outside the nontrivial floor."
+
+  run_gate_in_state "trivial-unchecked" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "trivial unchecked deliverables gate exits zero"
+  assert_eq "" "$RUN_STDOUT" "trivial unchecked deliverables are ignored"
+}
+
 test_all_clear_allows_and_resets_counter() {
   local session_id
   local state_dir
@@ -469,6 +544,26 @@ test_completion_claim_strengthens_state_based_reason_only() {
   assert_contains "$reason" "claimed completion" "claim with failed test adds contradiction reason"
 }
 
+test_completion_claim_strengthens_unchecked_deliverables_reason() {
+  local session_id
+  local state_dir
+  local workbench_root
+  local payload
+  local reason
+  session_id="stop-claim-unchecked"
+  state_dir="${TMP_DIR}/claim-unchecked.state"
+  workbench_root="${TMP_DIR}/claim-unchecked.workbench"
+  payload="$(payload_json "$session_id" false "Done, all tests pass.")"
+  make_workbench_task "$workbench_root" claim-unchecked "- [ ] Verify the last deliverable." "verification captured"
+
+  run_gate_in_state "claim-unchecked" "$payload" "$state_dir" "$workbench_root"
+  assert_exit_code 0 "$RUN_CODE" "claim with unchecked deliverables exits zero"
+  assert_valid_block_json "$RUN_STDOUT"
+  reason="$(block_reason "$RUN_STDOUT")"
+  assert_contains "$reason" "1 unchecked deliverable(s) in task.md for workbench task \`claim-unchecked\`" "claim with unchecked deliverables includes state reason"
+  assert_contains "$reason" "claimed completion" "claim with unchecked deliverables adds contradiction reason"
+}
+
 test_captured_payloads_allow_with_empty_state() {
   local payload
   local index
@@ -496,6 +591,10 @@ test_empty_verification_on_nontrivial_workbench_task_blocks
 test_invisible_only_verification_blocks
 test_trivial_heading_no_longer_exempts_task
 test_structured_trivial_flag_still_exempts_task
+test_unchecked_deliverables_on_nontrivial_workbench_task_blocks
+test_checked_deliverables_do_not_block
+test_unchecked_deliverables_inside_fenced_code_are_ignored
+test_trivial_task_unchecked_deliverables_are_ignored
 test_all_clear_allows_and_resets_counter
 test_stop_hook_active_allows_soft_signal
 test_stop_hook_active_still_blocks_open_tasks
@@ -503,4 +602,5 @@ test_background_tasks_allow_despite_open_tasks
 test_block_counter_yields_after_three_blocks
 test_malformed_stdin_exits_zero
 test_completion_claim_strengthens_state_based_reason_only
+test_completion_claim_strengthens_unchecked_deliverables_reason
 test_captured_payloads_allow_with_empty_state
