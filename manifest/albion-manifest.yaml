@@ -45,6 +45,10 @@ skills:
     path: plugin/skills/delegation/SKILL.md
   - id: fable-mode-glm-5-2
     path: plugin/skills/fable-mode-glm-5-2/SKILL.md
+  - id: hot-path
+    path: plugin/skills/hot-path/SKILL.md
+  - id: toolchain-fidelity
+    path: plugin/skills/toolchain-fidelity/SKILL.md
   - id: maturity-assessment
     path: plugin/skills/maturity-assessment/SKILL.md
   - id: recovery
