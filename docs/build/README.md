@@ -20,7 +20,7 @@ compressed.
 ## Status
 
 The system is built and CI-green — launcher, doctor, the compiled charter
-(v0.2), the enforcement hooks, skills and agents, vision, telemetry, and the
+(v0.3), the enforcement hooks, skills and agents, vision, telemetry, and the
 A/B bench are all in place and exit-tested live against the real endpoint.
 Release engineering (installer, hardened CI, community files) is done; the
 plugin-marketplace submission is the remaining step.
@@ -97,7 +97,9 @@ model across another vendor's coding CLI.
 M0–M5 sealed; M6 (OSS release engineering) done bar the marketplace
 submission. The log-014 design questions are resolved: the charter-trim track
 (logs 019–022) rebuilt the bench to measure process, ran the A/Bs, and sealed
-the trimmed **charter v0.2**. Next: **M7 — hardening** (provider abstraction,
+the trimmed **charter v0.2** — and the first post-release field-tuning round
+(logs 023) then hardened it into **charter v0.3** on real-world evidence.
+Next: **M7 — hardening** (provider abstraction,
 interactive conductor steering) and an escalation-forcing bench fixture.
 
 **Further out:** ports to Opencode (*Oakdale*) and Pi (*Bower Lake*) over the
@@ -117,3 +119,4 @@ Each milestone sealed CI-green, with an honest closeout log:
 | M5 Telemetry + A/B bench | Dual-cost-model telemetry, `last_test` writer, bench harness + report generator, first A/B report | [log 013](log/013-m5-sealed-first-ab-report.md) |
 | M6 OSS release engineering | `install.sh`, `albion-setup`, SHA-pinned CI, community files, hook-registration smoke-check, coexistence gating | [log 015](log/015-m6-oss-release-engineering.md) |
 | Charter v0.2 | Process-metrics bench (ALB-029), lean-charter A/Bs, validated trim of the shipped charter | [logs 019](log/019-bench-process-metrics.md)[–022](log/022-charter-v02-the-trim.md) |
+| Field-tuning round (0.3.0) | Stop-gate deliverables rule, three verification-fidelity fixtures, hot-path + toolchain-fidelity skills, charter v0.3 sealed on a pre-registered 16-run gate | [log 023](log/023-field-tuning-round.md) |

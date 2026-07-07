@@ -35,10 +35,10 @@ an MIT-licensed, open-source configuration layer. The pieces:
 
 ## Current state
 
-The system is **built, green, and released**: version 0.2.0 is tagged on
-GitHub with an installable package attached, and the plugin marketplace is
-published (`AmbitiousRealism2025/albion-marketplace`) — all milestones are
-complete. The one thing never yet verified is the install round-trip from a
+The system is **built, green, and released**: version 0.3.0 is tagged on
+GitHub with an installable package attached, and the plugin marketplace
+(`AmbitiousRealism2025/albion-marketplace`) carries the same version — all
+milestones plus one post-release field-tuning round are complete. The one thing never yet verified is the install round-trip from a
 user's machine (two commands; the maintainer has the instructions). Everything is on the `main` branch,
 the continuous-integration checks pass, and there are about 30 automated tests
 covering the launcher, the configuration compiler, the hooks, the evaluation
@@ -96,10 +96,6 @@ terminals.
 
 ## Open threads / what could come next
 
-- **Cut release 0.3.0 and refresh the marketplace** — the published package
-  still carries version 0.2.0; the field-tuning round (gate rule, fixtures,
-  skills, document v0.3) is on `main` but not yet in the packaged plugin.
-  Maintainer's call on timing.
 - **Watch version 0.3 in real use** — the sealed comparison proved nothing got
   worse; whether first submissions now match reworked ones on genuinely hard
   work only the next real project can show.
