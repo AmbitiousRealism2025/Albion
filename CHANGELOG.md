@@ -5,6 +5,13 @@ All notable changes to Albion are recorded here. This project adheres to
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.0] — 2026-07-06
+
+The field-tuning release: every change in it traces to an eight-phase
+real-world head-to-head run on the released 0.2.0 system (build log 023).
+
 ### Changed
 - **Charter v0.3 — verification standards** (ALB-033, sealed on a
   pre-registered 16-run A/B): evidence must hold with verification
