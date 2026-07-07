@@ -21,6 +21,11 @@ edit**:
   cheapest instrument that can kill at least one theory. The first plausible
   explanation is a hypothesis, not a diagnosis.
 
+Context pressure is an escalation of its own: when compaction looms or the
+session runs long, finish the current unit of work, bring the board current,
+and recommend a fresh session — the board *is* the handoff. Pushing a
+saturated context through one more phase is how finished work degrades.
+
 On contradiction: stop patching. Write the breakage down (a
 `counterexamples.jsonl` entry on the board), revise the theory, then edit.
 Contradiction is steering data, not noise — blind re-patching after a failed
