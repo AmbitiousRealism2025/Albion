@@ -5,7 +5,24 @@ All notable changes to Albion are recorded here. This project adheres to
 
 ## [Unreleased]
 
+### Changed
+- **Charter v0.3 — verification standards** (ALB-033, sealed on a
+  pre-registered 16-run A/B): evidence must hold with verification
+  scaffolding removed; at least one check against mutated state; verify at
+  the user's boundary; measurement-named criteria require the measurement;
+  docs are part of the artifact. Deliverables now live in `task.md` as a
+  checkbox list, and context pressure is an explicit escalation. Driven by an
+  eight-phase real-world head-to-head (build log 023).
+
 ### Added
+- **Stop gate: unchecked deliverables block completion** (ALB-031) — a
+  session can no longer stamp complete while its own board lists unfinished
+  checkbox deliverables.
+- **Three verification-fidelity bench fixtures** (ALB-032):
+  `drill-vs-production`, `dirty-state`, `complete-with-gaps` — each with
+  proof tests that the lazy path is rejected and the honest fix accepted.
+- **`hot-path` and `toolchain-fidelity` skills** (ALB-034), with charter
+  trigger rows.
 - Published the plugin marketplace
   ([AmbitiousRealism2025/albion-marketplace](https://github.com/AmbitiousRealism2025/albion-marketplace))
   carrying the packaged v0.2.0 plugin; the README documents marketplace

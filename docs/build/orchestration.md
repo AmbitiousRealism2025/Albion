@@ -49,6 +49,25 @@ This document specifies the methodology. The per-milestone journal lives in [`lo
 
 These numbers are published as-is, including failures. The credibility of this document depends on it.
 
+## Session hygiene for long multi-phase runs (field-learned, 2026-07-06)
+
+Two practices from an eight-phase real-world marathon (field observations,
+build log 023):
+
+- **Fresh session per phase, hydrated by the workspace.** A single continuous
+  session degraded measurably in its late phases (unfinished deliverables,
+  argument-instead-of-measurement), and the worker itself cited context
+  exhaustion. The workspace already *is* the handoff — git history, the
+  workbench board, prior phase manifests — and cold starts were proven to
+  work. Do not push a saturated context through one more phase. (Charter v0.3
+  §3 makes the same rule session-side.)
+- **Gate on constraints, not just claims.** Both a GLM worker and a frontier
+  model missed brief constraints on first submission in the same experiment —
+  it is a universal failure class, not a model tier trait. The conductor's
+  acceptance gate should mechanically diff the brief's explicit constraints
+  (and any mid-phase directives) against the submitted evidence before
+  accepting a manifest.
+
 ## Reusing this pattern
 
 Nothing here is Albion-specific: any project can run a frontier conductor over `codex exec` (or any headless coding CLI) with the same brief format, tmux-for-observability / files-for-signaling transport, and mechanical acceptance gates. When Albion's Conductor skill ships, it packages this protocol; until then, this document plus the build log is the reference implementation.

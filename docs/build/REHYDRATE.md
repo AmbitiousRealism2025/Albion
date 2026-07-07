@@ -48,6 +48,21 @@ terminals.
 
 ## What was done most recently
 
+- **A field-tuning round (five work packets), driven by real-world use.** The
+  maintainer ran the released system through an eight-phase, blind-judged
+  build of a complete native macOS app and kept an observations record. That
+  record produced: a new completion-gate rule (unfinished checklist items now
+  block "done"), three new evaluation tasks that trap lazy verification, two
+  new on-demand skills (cost-of-hot-code, tool-generated-file fidelity), and
+  **version 0.3 of the always-on document** — five new verification rules
+  (evidence must survive with test scaffolding removed; check mutated state,
+  not just fresh launches; verify where the user actually touches the
+  product; a criterion that names a measurement needs the measurement; docs
+  are part of the artifact) plus a rule to wrap up and hand off rather than
+  push a saturated session. Sealed only after a pre-registered 16-run
+  comparison passed — including the first perfect working-notes sweep in any
+  batch. (Build log 023.)
+
 - **Shipped version 0.2 of the always-on document** (the "lean" resolution —
   see the open-threads entry below for the full story): 222 lines from 350,
   validated by a pre-registered comparison before sealing. (Work packet
@@ -81,9 +96,13 @@ terminals.
 
 ## Open threads / what could come next
 
-- **Publish the packaged plugin to the marketplace** — the one remaining setup
-  step; needs the maintainer's account. `bin/albion-package` produces the
-  artifact and is verified.
+- **Cut release 0.3.0 and refresh the marketplace** — the published package
+  still carries version 0.2.0; the field-tuning round (gate rule, fixtures,
+  skills, document v0.3) is on `main` but not yet in the packaged plugin.
+  Maintainer's call on timing.
+- **Watch version 0.3 in real use** — the sealed comparison proved nothing got
+  worse; whether first submissions now match reworked ones on genuinely hard
+  work only the next real project can show.
 - **The "lean document" question — RESOLVED and shipped.** The maintainer
   approved the trim, and the always-on document is now **version 0.2**: 222
   lines instead of 350, built on the slim chassis the experiments validated.
