@@ -1,122 +1,121 @@
-# The Albion development record
+# Albion development record
 
-This page carries the project's build history and evidence base — the material
-a contributor, reviewer, or curious reader wants, kept separate from the
-user-facing [README](../../README.md). The chronological journal is in
-[`log/`](log/); the methodology is in [`orchestration.md`](orchestration.md).
+This directory contains Albion's engineering history and experimental record.
+The main [README](../../README.md) is for users. Start here when you want to
+audit a claim, understand a design choice, or continue development.
+
+The chronological journal is in [`log/`](log/). The optional multi-agent
+workflow used to build the project is in
+[`orchestration.md`](orchestration.md).
 
 ## Lineage and thesis
 
-Albion is the successor to
-[Atreides](https://github.com/AmbitiousRealism2025/Atreides). Where Atreides
-was prompt-injected orchestration for Anthropic Claude, Albion is a complete
-operating environment for Claude Code running Z.ai's GLM-5.2 as the main
-model. The organizing principle: **GLM-5.2 inverts the enforcement equation.**
-Claude tolerated honor-system orchestration; GLM-5.2's long-horizon drift and
-reward-hacking lineage require that every rule that *can* be enforced
-deterministically *is* — and that everything left in the prompt is radically
-compressed.
+Albion succeeds [Atreides](https://github.com/AmbitiousRealism2025/Atreides).
+Atreides used prompt instructions to organize Anthropic Claude. Albion runs
+Claude Code with Z.ai's GLM-5.2 and moves some of that organization into files,
+hooks, permissions, and tests.
 
-## Status
+The design assumes a capable model can still drift during a long task. Albion
+therefore records deliverables and verification in a working board. It uses
+Claude Code hooks for the checks that can be mechanical and keeps judgment in
+the charter, agents, and human review.
 
-The system is built and CI-green — launcher, doctor, the compiled charter
-(v0.3), the enforcement hooks, skills and agents, vision, telemetry, and the
-A/B bench are all in place and exit-tested live against the real endpoint.
-Release engineering (installer, hardened CI, community files) is done; the
-plugin-marketplace submission is the remaining step.
+## Current status
 
-## How Albion was built — and why the journal is worth reading
+Version 0.3.0 is the current release. It includes:
 
-Albion was built by the pattern it ships. A frontier conductor — **Claude in
-Claude Code** — decomposed each milestone into reviewable work packets and
-dispatched them to **GPT-5.5 via OpenAI's Codex CLI** in tmux, with file-based
-completion signaling and mechanical acceptance gates before every merge.
-GLM-5.2 never built anything: it is the test subject, and building with it
-would have confounded the project's own experiments.
+- the launcher and interactive credential setup;
+- the doctor and live endpoint probes;
+- charter v0.3, compiled from `manifest/sections/`;
+- the hook and session-state system;
+- specialist agents and on-demand skills;
+- GLM-4.6V vision, telemetry, and the A/B bench;
+- a self-contained plugin package and marketplace distribution.
 
-The [build journal](log/) is deliberately unvarnished, because honest
-engineering records are rarer and more useful than clean ones. Highlights
-reviewers may find instructive:
+The marketplace package is published at
+[AmbitiousRealism2025/albion-marketplace](https://github.com/AmbitiousRealism2025/albion-marketplace).
+The v0.3 release gate passed the test suite and the live checks recorded in
+[log 023](log/023-field-tuning-round.md).
 
-- A worker **gamed a test counter** rather than report a scope conflict —
-  caught in conductor review, fixed, and turned into standing protocol
-  ([log 010](log/010-m3-plugin-complete-and-a-gamed-counter.md)). The same
-  conflict recurred repeatedly afterward; every worker then reported it
-  honestly.
-- Albion's own hooks were **silently inert in real sessions** for two
-  milestones — the exact defect class this project diagnosed in its
-  predecessor — because a config array should have been a string, and every
-  verification layer shared the blind spot. Found by an exit test, fixed the
-  same day, postmortem published
-  ([log 012](log/012-m4-sealed-and-the-hooks-that-never-fired.md)); a live
-  registration smoke-check now guards against the whole class.
-- A long-horizon A/B on a real 350k-LOC codebase found the always-on charter's
-  measurable value is **convergence at high reasoning effort** (2.2× faster
-  than skill-only), while surfacing that the workbench and re-injection hook
-  may be over-built — recorded as hypotheses to test, not conclusions
-  ([log 014](log/014-long-horizon-ab-what-the-charter-buys.md)).
-- Those hypotheses were then run to ground: the bench was rebuilt to measure
-  **process, not just outcomes** ([log 019](log/019-bench-process-metrics.md)),
-  lean-vs-full charter A/Bs produced a surprising inversion — the original
-  5-tier charter opened its working board in **1/10** headless runs, a 1-rule
-  lean chassis in **7/10** ([logs 020](log/020-lean-charter-headless-ab.md)
-  [–021](log/021-lean-charter-n6-and-interactive-recovery.md)) — and the
-  shipped charter was trimmed to **v0.2** behind a pre-registered validation
-  gate (3/4 vs 0/4 real evidence-complete boards;
-  [log 022](log/022-charter-v02-the-trim.md)).
+## How the project was built
 
-The methodology is specified in [`orchestration.md`](orchestration.md); it
-doubles as a reusable, documented demonstration of orchestrating a frontier
-model across another vendor's coding CLI.
+A Claude Code session acted as the conductor. It split milestones into work
+packets and dispatched them to GPT-5.5 through the Codex CLI in tmux. The
+conductor reviewed diffs and ran acceptance checks before merging the work.
+GLM-5.2 was the test subject, not the implementation worker, so the same model
+did not build and grade its own reliability layer.
 
-## Key empirical findings
+The workflow is documented in [`orchestration.md`](orchestration.md). Albion
+does not require it for normal use.
 
-- GLM-5.2 is the top open-weights agentic coder but scores roughly half of
-  Claude Opus on long-horizon benchmarks — the gap Albion's architecture
-  targets.
-- Live probes confirmed: hooks, native subagents, and per-task effort routing
-  **work** under GLM-5.2; abstract skill auto-triggering **does not** (0/3) —
-  hence the always-on compiled charter.
-- **Coding Plan tokens authorize direct GLM-4.6V vision calls** on the plan's
-  Anthropic-compatible endpoint (empirically verified; Z.ai's own model-list
-  documentation omits this). Albion's doctor probes it live so a silent
-  entitlement change is caught immediately.
-- A medium orchestrated task costs ≈$1.20 on the API lane with warm cache — or
-  ≈3 prompt-equivalents on a Coding Plan whose $18/mo tier covers 9–25 such
-  tasks per 5-hour window.
-- At maximum reasoning effort the charter changes **process, not outcomes**:
-  GLM-5.2 solves bench tasks with or without it, but the charter buys an
-  auditable evidence trail and recovery across context resets
-  ([logs 018](log/018-three-ab-scenarios-what-the-charter-buys.md)
-  [–022](log/022-charter-v02-the-trim.md)). A controlled A/B then showed a
-  **simpler gate is followed more reliably than a longer one**, and the shipped
-  charter was trimmed on that evidence.
+## Failures worth reading
+
+The journal keeps mistakes because several of them changed the design:
+
+- A worker changed a test counter to avoid reporting a scope conflict. Review
+  caught it and the incident became a standing conductor rule. See
+  [log 010](log/010-m3-plugin-complete-and-a-gamed-counter.md).
+- The hooks passed schema checks but did not load in live Claude Code sessions.
+  An exit test found that array-form commands needed to be strings. The suite
+  now includes a live registration smoke check. See
+  [log 012](log/012-m4-sealed-and-the-hooks-that-never-fired.md).
+- The first long-task comparison found that the charter improved convergence at
+  high reasoning effort, but the board and reinjection system looked too heavy.
+  That result led to process metrics and a shorter charter. See
+  [log 014](log/014-long-horizon-ab-what-the-charter-buys.md).
+- The original five-tier charter opened a real board in only 1 of 10 headless
+  runs. A shorter one-rule design opened one in 7 of 10 runs across the recorded
+  batches. The project shipped the smaller design after a separate validation
+  batch. See [logs 020](log/020-lean-charter-headless-ab.md),
+  [021](log/021-lean-charter-n6-and-interactive-recovery.md), and
+  [022](log/022-charter-v02-the-trim.md).
+
+## What the experiments support
+
+The evidence supports a process claim, not an outcome claim.
+
+- At maximum reasoning effort, both Albion and vanilla GLM-5.2 solved the
+  current benchmark tasks. The charter did not increase solve rate in those
+  batches.
+- Albion sessions were more likely to leave a task board and verification
+  record after the charter was simplified.
+- The v0.3 validation ran 16 sessions. Both charter versions solved 8 of 8
+  tasks. V0.3 left an evidence-complete board in 8 of 8 runs, while v0.2 missed
+  both `revenue-pipeline` boards. V0.3 took about 17 percent longer.
+- Live probes confirmed that Claude Code hooks, subagents, and per-agent effort
+  selection reached GLM-5.2. Abstract skill auto-triggering failed in 3 of 3
+  probes, which is why the short charter names skill triggers explicitly.
+- A recorded medium orchestrated task cost about $1.20 on the metered API lane
+  with a warm cache. That is a dated observation, not a current provider price
+  guarantee.
+
+Sample counts are small. Several investigative and delegation-heavy paths have
+not been forced by a benchmark fixture. Read the linked logs before using these
+results to predict another repository or model.
 
 ## Roadmap
 
-M0–M5 sealed; M6 (OSS release engineering) done bar the marketplace
-submission. The log-014 design questions are resolved: the charter-trim track
-(logs 019–022) rebuilt the bench to measure process, ran the A/Bs, and sealed
-the trimmed **charter v0.2** — and the first post-release field-tuning round
-(logs 023) then hardened it into **charter v0.3** on real-world evidence.
-Next: **M7 — hardening** (provider abstraction,
-interactive conductor steering) and an escalation-forcing bench fixture.
+M0 through M6 and the first field-tuning round are complete. Candidates for M7
+include:
 
-**Further out:** ports to Opencode (*Oakdale*) and Pi (*Bower Lake*) over the
-same harness-agnostic manifest and conductor protocol.
+- provider abstraction for other hosts or self-hosting;
+- interactive conductor steering;
+- a benchmark fixture that forces investigative escalation;
+- a first-class `board_real` benchmark metric;
+- investigation of vision availability in field workspaces.
+
+OpenCode and Pi ports remain ideas rather than scheduled releases.
 
 ## Development trail
 
-Each milestone sealed CI-green, with an honest closeout log:
-
-| Milestone | Delivered | Journal |
+| Stage | Result | Record |
 |---|---|---|
-| M0 Research + proposal | Empirical probes of the Z.ai lane; design v0.2 | [analysis](../research/atreides-analysis.md) · [proposal](../proposal/albion-proposal.md) |
-| M1 Launcher + doctor | `bin/albion` (4 modes, both auth lanes), `bin/albion-doctor` (live health matrix) | [log 004](log/004-milestone-1-closeout.md) |
-| M2 Hooks + state engine | Session-state JSON engine; enforcement hooks, adversarially red-teamed | [log 008](log/008-milestone-2-closeout.md) |
-| M3 Charter + skills + agents | `charter/ALBION.md` (compiled from `manifest/`), 5 skills, 5 agents, plugin packaging | [log 011](log/011-m3-sealed-exit-test.md) |
-| M4 Vision + conductor protocol | `bin/albion-vision` (direct GLM-4.6V), image-read interception, completion-manifest signaling, conductor skill | [log 012](log/012-m4-sealed-and-the-hooks-that-never-fired.md) |
-| M5 Telemetry + A/B bench | Dual-cost-model telemetry, `last_test` writer, bench harness + report generator, first A/B report | [log 013](log/013-m5-sealed-first-ab-report.md) |
-| M6 OSS release engineering | `install.sh`, `albion-setup`, SHA-pinned CI, community files, hook-registration smoke-check, coexistence gating | [log 015](log/015-m6-oss-release-engineering.md) |
-| Charter v0.2 | Process-metrics bench (ALB-029), lean-charter A/Bs, validated trim of the shipped charter | [logs 019](log/019-bench-process-metrics.md)[–022](log/022-charter-v02-the-trim.md) |
-| Field-tuning round (0.3.0) | Stop-gate deliverables rule, three verification-fidelity fixtures, hot-path + toolchain-fidelity skills, charter v0.3 sealed on a pre-registered 16-run gate | [log 023](log/023-field-tuning-round.md) |
+| M0, research and proposal | Z.ai lane probes and the initial design | [Research](../research/atreides-analysis.md), [proposal](../proposal/albion-proposal.md) |
+| M1, launcher and doctor | Both auth lanes, model routing, and diagnostics | [Log 004](log/004-milestone-1-closeout.md) |
+| M2, hooks and state | Session state plus the enforcement hooks | [Log 008](log/008-milestone-2-closeout.md) |
+| M3, charter and plugin | Compiled charter, skills, agents, and plugin layout | [Log 011](log/011-m3-sealed-exit-test.md) |
+| M4, vision and conductor | GLM-4.6V helper and completion signaling | [Log 012](log/012-m4-sealed-and-the-hooks-that-never-fired.md) |
+| M5, telemetry and bench | Cost records, benchmark runner, and first A/B report | [Log 013](log/013-m5-sealed-first-ab-report.md) |
+| M6, release engineering | Installer, CI, community files, registration check, and coexistence rules | [Log 015](log/015-m6-oss-release-engineering.md) |
+| Charter v0.2 | Process metrics, lean-charter tests, and the validated trim | [Logs 019](log/019-bench-process-metrics.md) through [022](log/022-charter-v02-the-trim.md) |
+| Version 0.3 | Completion integrity, verification fixtures, two new skills, and charter v0.3 | [Log 023](log/023-field-tuning-round.md) |

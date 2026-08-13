@@ -1,37 +1,83 @@
 # Contributing to Albion
 
-Thanks for your interest. Albion is small, deliberate, and test-gated; contributions that match that shape merge quickly.
+Albion accepts focused changes with a clear failure case and a mechanical way
+to check the result. Start by reading [`CONVENTIONS.md`](CONVENTIONS.md).
 
 ## Development setup
 
-No dependencies beyond `bash`, `python3`, `curl`, and (for lint parity with CI) `shellcheck`. Clone and run:
+Required tools:
+
+- `bash`
+- `python3`
+- `curl`
+- `shellcheck` for the CI lint pass
+
+Run the test suite from the repository root:
 
 ```bash
-bash tests/run.sh        # full suite — zero-dependency, hermetic, must stay green
+bash tests/run.sh
 ```
 
-Run the CI-equivalent shellcheck batch before pushing (single-file shellcheck raises false SC1091s; use the batch form from `.github/workflows/ci.yml`):
+Run the same ShellCheck selection used by CI:
 
 ```bash
-find bin env plugin/scripts state tests -type f -print0 |
-  while IFS= read -r -d '' f; do
-    if [[ "$f" == *.sh ]]; then printf '%s\0' "$f"; continue; fi
-    if IFS= read -r first < "$f" && [[ "$first" =~ ^#!.*(bash|[[:space:]/]sh)([[:space:]]|$) ]]; then printf '%s\0' "$f"; fi
-  done | xargs -0 -r shellcheck
+find bin env plugin/scripts state tests telemetry bench -type f -print0 |
+  while IFS= read -r -d '' file; do
+    if [[ "$file" == *.sh ]]; then
+      printf '%s\0' "$file"
+      continue
+    fi
+
+    if IFS= read -r first_line < "$file" &&
+      [[ "$first_line" =~ ^#!.*(bash|[[:space:]/]sh)([[:space:]]|$) ]]; then
+      printf '%s\0' "$file"
+    fi
+  done |
+  xargs -0 -r shellcheck
 ```
 
-## Rules that will save you a review round
+The scripts target Ubuntu and macOS userlands. GitHub Actions currently runs
+the Ubuntu checks. If a change depends on `sed`, `stat`, `date`, or another tool
+that differs between GNU and BSD systems, test it on macOS or move the fragile
+operation into `python3`.
 
-- **Read [`CONVENTIONS.md`](CONVENTIONS.md) first.** Portability is enforced: identical behavior on macOS (BSD userland) and Ubuntu (GNU). Use `python3` for anything `sed`/`stat`-fragile. CI runs both platforms' expectations.
-- **Tests assert invariants, not constants.** Derived output (counts, tallies) is computed in the test, not hardcoded — hardcoded constants have broken three times in this repo's history and are now a review flag.
-- **Hooks and config are only "verified" when the consumer that loads them has been observed acting on them.** Schema-shaped tests are necessary, not sufficient — see [build log 012](docs/build/log/012-m4-sealed-and-the-hooks-that-never-fired.md) for the scar tissue.
-- **Charter changes go through `manifest/`.** `charter/ALBION.md` is compiled; edit the fragments in `manifest/sections/` and run `bin/albion-compile`. The drift gate (`--check`) is CI-enforced.
-- **No new dependencies.** The zero-dependency property is a deliberate distribution feature.
+## Change rules
 
-## How changes are reviewed
+- Add or update a test for changed behavior. Prefer an invariant over a copied
+  output count.
+- Verify hooks through the Claude Code consumer when possible. A valid JSON
+  shape does not prove that Claude Code registered or executed the hook. The
+  [hook registration postmortem](docs/build/log/012-m4-sealed-and-the-hooks-that-never-fired.md)
+  explains why this rule exists.
+- Edit charter source in `manifest/sections/`, then run `bin/albion-compile`.
+  Do not edit `charter/ALBION.md` directly.
+- Keep the runtime dependency set to `bash`, `python3`, and `curl` unless a
+  change makes the distribution cost of a new dependency worth it.
+- Never place a real credential in a fixture, log, screenshot, or issue.
 
-Albion is built by a conductor-and-workers process ([`docs/build/orchestration.md`](docs/build/orchestration.md)); external PRs get the same gate: scope check against the stated intent, full suite, shellcheck batch, and behavior probed directly rather than taken from the description. CI green is required for merge. Honest partial work with a clear description beats polished-looking claims — that principle is load-bearing here.
+## Documentation changes
 
-## Reporting bugs
+Keep the README focused on installation, behavior, evidence, and limits. Put
+implementation history in `docs/build/` and detailed command contracts beside
+the command they describe.
 
-Open a GitHub issue with the smallest reproduction you can manage. For anything security-relevant, use [`SECURITY.md`](SECURITY.md) instead of a public issue.
+Check relative links after moving or renaming a file. Claims about price,
+provider quotas, model availability, and Claude Code behavior need a source or
+a dated project measurement because they can change outside this repository.
+
+## Pull requests
+
+A useful pull request includes:
+
+- the problem or failed invariant;
+- the smallest relevant change;
+- the command used to verify it;
+- any live check that could not be run and why.
+
+CI must pass before merge. Partial work is fine when the description names what
+remains and does not claim a result that was not checked.
+
+## Bug and security reports
+
+Open a GitHub issue for ordinary bugs and include the smallest reproduction you
+can provide. Use [`SECURITY.md`](SECURITY.md) for private security reports.
