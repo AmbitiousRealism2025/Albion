@@ -1,101 +1,169 @@
-# Running Claude Code on GLM-5.2
+# Run Claude Code on GLM-5.2
 
-This guide explains how to run **stock Claude Code against Z.ai's GLM-5.2** instead of
-Anthropic's models. There is no fork and no patched binary — it is the normal Claude
-Code CLI, pointed at a different endpoint with a few environment variables. Albion
-automates everything here (`bin/albion`), but the mechanics are worth understanding,
-and they work on their own if you just want cheap GLM-5.2 in Claude Code without the
-rest of Albion.
+Albion runs the stock Claude Code CLI against Z.ai's GLM-5.2 API. It does not
+patch the CLI. The launcher sets the API endpoint, credential, model mapping,
+charter, plugin, and Albion settings for one process.
 
-## The idea in one paragraph
+This guide covers the normal Albion setup and the equivalent manual Claude Code
+configuration.
 
-Claude Code talks to an Anthropic-compatible API. Z.ai exposes exactly such an API for
-its GLM models. So you set `ANTHROPIC_BASE_URL` to Z.ai's endpoint, provide a Z.ai
-token, and map Claude Code's model "slots" to GLM model names. Claude Code is none the
-wiser — it sends the same requests; they just land at Z.ai and are served by GLM-5.2.
+## Requirements
 
-## Prerequisites
+- Claude Code 2.1.163 or newer. Version 2.1.195 or newer is preferred.
+- `bash`, `curl`, and `python3`.
+- A Z.ai GLM Coding Plan token or a metered Z.ai API key.
 
-- Claude Code ≥ 2.1.163 (2.1.195+ preferred).
-- A Z.ai credential: a **Coding Plan** subscription token (prompt-metered) or a metered
-  **API key**.
-- `bash`, `curl`, `python3`.
+Z.ai documents the Anthropic Messages endpoint for Claude Code at
+`https://api.z.ai/api/anthropic`. See the provider's
+[tool integration guide](https://docs.z.ai/devpack/tool/others) for its current
+endpoint and plan restrictions.
 
-## The environment
+## Configure Albion
+
+The interactive setup is the simplest path:
 
 ```bash
-# Z.ai's Anthropic-compatible endpoint. NOT /api/paas/v4 — that is the OpenAI-style
-# endpoint and a Coding Plan token is rejected there (error 1113).
+albion-setup
+albion-doctor --live
+albion
+```
+
+`albion-setup` asks which authentication lane to use, reads the credential
+without echoing it, and writes a mode `600` secrets file. The doctor checks the
+local files, Claude Code version, endpoint, effort setting, hook registration,
+and API access.
+
+For a temporary session, export a token instead:
+
+```bash
+export ALBION_ZAI_TOKEN="<your Z.ai token>"
+export ALBION_AUTH_LANE="plan"
+bin/albion-doctor --live
+bin/albion
+```
+
+## Authentication lanes
+
+Albion supports two billing paths:
+
+| Lane | Preferred variable | Metering | Endpoint |
+|---|---|---|---|
+| `plan` | `ALBION_ZAI_PLAN_TOKEN` | GLM Coding Plan quota | `https://api.z.ai/api/anthropic` |
+| `api` | `ALBION_ZAI_API_KEY` | API tokens | `https://api.z.ai/api/anthropic` |
+
+`ALBION_ZAI_TOKEN` is the fallback when the lane-specific variable is unset.
+The plan lane is the default.
+
+Use the Anthropic endpoint with Claude Code. A Coding Plan token sent to the
+general OpenAI-compatible endpoint can return error `1113`, which usually means
+the credential and endpoint belong to different billing paths.
+
+## Manual Claude Code configuration
+
+You can run GLM-5.2 without the Albion charter or plugin. Set the environment
+that Albion normally owns:
+
+```bash
 export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
 export ANTHROPIC_AUTH_TOKEN="<your Z.ai token>"
 
-# Map Claude Code's model slots to GLM. The [1m] suffix unlocks the 1M-token context.
 export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2[1m]"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2[1m]"
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"   # the genuinely cheaper tier
-```
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"
 
-Then launch Claude Code as usual, pinning the model so Claude Code doesn't try to reach
-Anthropic with a Claude model name:
-
-```bash
 claude --model 'glm-5.2[1m]'
 ```
 
-## Gotchas (learned the hard way — see `docs/build/`)
+The `[1m]` suffix selects the 1 million token context variant. Z.ai describes
+that context window in its [GLM-5.2 release note](https://z.ai/blog/glm-5.2).
 
-- **Use `/api/anthropic`, never `/api/paas/v4`.** A Coding Plan token on the paas/v4
-  endpoint returns `error 1113` ("insufficient balance") regardless of your plan.
-- **Keep the `[1m]` suffix** on the model name or you lose the 1M-token context window.
-- **Never set `CLAUDE_CODE_EFFORT_LEVEL`.** It is a global override that disables
-  per-task/per-subagent effort routing. Set the session default in `settings.json`
-  (`"effortLevel": "xhigh"` → GLM's `reasoning_effort: max`, Z.ai's recommendation for
-  coding) instead.
-- **Ignore Claude Code's cost display.** Its `total_cost_usd` is wrong against a
-  non-Anthropic endpoint (it over-reports; Albion's telemetry measures the real cost).
+Do not set `CLAUDE_CODE_EFFORT_LEVEL` for Albion. Claude Code treats it as a
+global override, which prevents Albion's agents and skills from selecting their
+own effort. Albion passes a session settings file with `effortLevel` set to
+`xhigh` instead.
 
-## Auth lanes
+## Launcher overrides
 
-| | Coding Plan | API key |
-|---|---|---|
-| Metering | Prompts per 5-hour window | Tokens (funded balance) |
-| Best for | Daily driver | Overflow, CI, bursty fan-out |
-| Endpoint | `/api/anthropic` | `/api/anthropic` or `/api/paas/v4` |
-
-Vision (GLM-4.6V) works on the plan token directly via `/api/anthropic`; on a metered
-key you can point it at a separate vision credential (see `ALBION_VISION_TOKEN`).
-
-## Launcher environment overrides
-
-`bin/albion` reads these before launching (all optional; defaults in parentheses):
+`bin/albion` reads these variables before starting Claude Code:
 
 | Variable | Effect |
 |---|---|
-| `ALBION_AUTH_LANE` | `plan` (default) or `api` — selects which token the env script uses |
-| `ALBION_MODEL` | Model pin passed as `--model` (`glm-5.2[1m]`) |
-| `ALBION_CHARTER` | Path to the charter file injected as system context (`charter/ALBION.md`). This is how charter A/B experiments run an alternative document against the same launcher — see `docs/build/experiments/` |
-| `ALBION_VISION_TOKEN`, `ALBION_VISION_LANE` | Separate credential/lane for GLM-4.6V (see above) |
+| `ALBION_AUTH_LANE` | Select `plan` or `api` |
+| `ALBION_ZAI_PLAN_TOKEN` | Credential for the plan lane |
+| `ALBION_ZAI_API_KEY` | Credential for the API lane |
+| `ALBION_ZAI_TOKEN` | Fallback credential for either lane |
+| `ALBION_MODEL` | Model passed to `claude --model`; defaults to `glm-5.2[1m]` |
+| `ALBION_CHARTER` | Alternate charter path, used by A/B experiments |
+| `ALBION_ALLOW_OVERRIDES` | Preserve existing Claude Code model mappings when set to `1` |
+| `ALBION_VISION_TOKEN` | Separate credential for GLM-4.6V |
+| `ALBION_VISION_LANE` | Billing lane for the separate vision credential |
 
-Token variables (`ALBION_ZAI_PLAN_TOKEN`, `ALBION_ZAI_API_KEY`, fallback
-`ALBION_ZAI_TOKEN`) are written by `bin/albion-setup`; the full input contract is
-documented in the header of `env/albion-env.sh`.
+The header in [`env/albion-env.sh`](../env/albion-env.sh) documents the tuning
+variables for timeouts, compaction, output limits, and subprocess behavior.
 
-## What Albion adds on top
+Run `albion --dry-run` to inspect the resolved lane, models, charter path, and
+Claude Code arguments. The output masks the credential.
 
-You can stop here and have cheap GLM-5.2 in Claude Code. Albion wraps all of the above
-in one command and adds the operating system around it:
+## Vision
 
-- `bin/albion` sources this environment, pins the model, and injects the charter +
-  enforcement plugin — so you just run `albion`.
-- `bin/albion-setup` writes your token to a mode-600 secrets file interactively.
-- `bin/albion-doctor` verifies every one of these settings (endpoint shape, version,
-  effort, a live 1-token probe) and fails loudly on any misconfiguration.
-- The enforcement hooks, the compiled charter, vision, telemetry, and the bench are all
-  layered on — see the [README](../README.md).
+`albion-vision` sends image requests directly to GLM-4.6V. A separate vision
+credential is useful when the main model uses the API lane but vision should
+use a different account or billing path.
 
-## Coexistence with stock Claude
+```bash
+export ALBION_VISION_TOKEN="<vision credential>"
+export ALBION_VISION_LANE="api"
+albion-vision screenshot.png
+```
 
-Everything above is set **per invocation** by `bin/albion` — none of it is written to
-your shell profile or global config. So `albion` (GLM) and `claude` (Anthropic) run
-side by side in separate terminals with zero interference. See the README's
-"Run Albion alongside stock Claude" section.
+Coding Plan access to direct GLM-4.6V calls came from Albion's live tests, not a
+documented provider guarantee. `albion-doctor --live` probes that path so an
+entitlement change fails before an image task depends on it.
+
+## Cost reporting
+
+Claude Code calculates its built-in dollar total with Anthropic prices. That
+number does not represent a Z.ai request. `telemetry/albion-metrics` reads the
+reported token counts and applies Albion's Z.ai price table for the API lane.
+For the plan lane, it reports prompt equivalents instead of dollars.
+
+Price tables age. Check [`telemetry/README.md`](../telemetry/README.md) and the
+provider's current pricing before using the result for budgeting.
+
+## Coexistence with stock Claude Code
+
+The launcher exports its endpoint and model settings only to the process it
+starts. It does not update your shell profile or global Claude Code config.
+
+The plugin hooks also check `ALBION_ACTIVE=1`. Only the Albion launcher sets
+that marker while loading the plugin. This keeps a globally installed Albion
+plugin inert in an ordinary `claude` session.
+
+You can therefore run these in separate terminals:
+
+```text
+albion    GLM-5.2 with the Albion charter and plugin
+claude    your normal Claude Code configuration
+```
+
+## Troubleshooting
+
+Start with:
+
+```bash
+albion-doctor --live
+```
+
+Common failures:
+
+| Symptom | Likely cause | Check |
+|---|---|---|
+| Error `1113` | Coding Plan token sent to the wrong endpoint | Lane and `ANTHROPIC_BASE_URL` |
+| Claude model name reaches Z.ai | Model mapping or `--model` pin is missing | `albion --dry-run` |
+| Per-agent effort does not change | `CLAUDE_CODE_EFFORT_LEVEL` is set globally | Unset it before launch |
+| Hooks do not fire | Plugin did not register or `ALBION_ACTIVE` is absent | Doctor registration check |
+| Vision fails while text works | Vision credential or entitlement differs | Doctor's live vision probe |
+
+If the doctor reports a hook or schema failure after a Claude Code upgrade,
+open an issue with the Claude Code version, Albion version, doctor output, and
+the smallest reproduction that does not expose a credential.

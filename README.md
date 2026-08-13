@@ -5,149 +5,214 @@ https://github.com/user-attachments/assets/df653b40-7605-4022-a802-2dd6d136db2c
 [![CI](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml/badge.svg)](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Run Claude Code on GLM-5.2 — same workflow, a fraction of the model cost, with discipline built in.**
+Run Claude Code on Z.ai's GLM-5.2 with a working board, completion checks,
+specialist agents, vision, and cost telemetry.
 
-Albion is an MIT-licensed configuration layer that points the Claude Code CLI at
-Z.ai's **GLM-5.2** — nothing forked, nothing patched — and wraps the cheaper
-model in an operating discipline it needs to be trusted with real work:
+Albion is an MIT-licensed launcher and Claude Code plugin. It points the stock
+Claude Code CLI at Z.ai's Anthropic-compatible API, then adds an operating
+charter and a set of hooks. It does not fork or patch Claude Code.
 
-- **An always-on operating charter** injected into every session — no modes, no
-  trigger phrases. It makes the model keep a plain-file working board
-  (`task.md` + `verification.md`) for every non-trivial task.
-- **Deterministic enforcement hooks** — a stop gate that blocks "done" until the
-  work is verified, a destructive-command guard, a secrets scrubber for the
-  working notes, and state re-injection so the board survives context
-  compaction.
-- **Delegate agents and on-demand skills** — scouts, a fresh-context verifier, a
-  counterexample hunter — with per-agent reasoning-effort routing that
-  actually reaches the API.
-- **A vision helper** (`albion-vision`) so image reads work, and **telemetry**
-  that reports your real cost (Claude Code's built-in cost display is wrong
-  against non-Anthropic endpoints).
+The goal is narrower than making the model smarter. Albion tries to make long
+coding sessions easier to inspect and harder to abandon half-finished. Every
+non-trivial task gets a plain-file board with its deliverables and verification
+record. Hooks preserve that state across compaction and can block completion
+when the recorded work is still open.
 
-Why people try it: GLM-5.2 coding plans start at **$18/month** with a
-**1M-token context**, there is **nothing to migrate**, and Albion runs beside
-your stock Claude Code without touching it.
+## Why Albion exists
+
+GLM-5.2 has open weights, selectable reasoning effort, and a 1 million token
+context window. Z.ai also offers it through GLM Coding Plan. Those properties
+make it useful for long coding tasks, but a large context window does not keep
+an agent honest or organized by itself.
+
+Albion's own benchmark results make a modest claim:
+
+- At maximum reasoning effort, GLM-5.2 solved the current tasks with and
+  without Albion.
+- Albion changed the work record. Sessions created task boards, recorded
+  verification, and recovered that state after context resets more reliably.
+- The added verification took time. In the v0.3 validation batch, Albion's
+  runs were about 17 percent longer.
+
+Read the [development record](docs/build/README.md) for the experiments,
+failures, and small-sample limits behind those statements.
 
 ## Install
 
-**From the plugin marketplace** (inside Claude Code):
+You need Claude Code 2.1.163 or newer, plus `bash`, `python3`, `curl`, and a Z.ai
+credential. Claude Code 2.1.195 or newer is preferred.
 
-```
+### Plugin marketplace
+
+Run these commands inside Claude Code:
+
+```text
 /plugin marketplace add AmbitiousRealism2025/albion-marketplace
 /plugin install albion@albion
 ```
 
-Enabling the plugin puts the `albion` launcher on your PATH; set your Z.ai
-credential (`albion-setup` or `export ALBION_ZAI_TOKEN=...`), then run
-`albion-doctor --live` and `albion`.
-
-**Or from a fresh clone:**
+Then configure your credential and check the installation:
 
 ```bash
-./install.sh          # checks prerequisites, puts the tools on your PATH
-albion-setup          # (optional) securely stores your Z.ai token
-albion-doctor --live  # verifies everything, including a 1-token live probe
-albion                # Claude Code on GLM-5.2 + charter + enforcement plugin
+albion-setup
+albion-doctor --live
+albion
 ```
 
-`install.sh` symlinks `albion`, `albion-doctor`, `albion-vision`, `albion-compile`, and `albion-setup` into `~/.local/bin` (override with `--prefix DIR`) and prints the PATH line to add if needed. It never reads or writes a token. `albion-setup` prompts for your credential with hidden input and writes a mode-600 secrets file. New to running GLM-5.2 in Claude Code? See the [GLM-5.2 setup guide](docs/glm-5.2-setup.md).
+`albion-setup` reads the token without echoing it and writes a mode `600`
+secrets file.
 
-Albion also packages into a **single self-contained plugin directory** (`bin/albion-package`) that carries the launcher and everything it needs — the form used for marketplace distribution (see [`docs/packaging.md`](docs/packaging.md)).
-
-## Quickstart (without installing)
-
-Prerequisites: Claude Code ≥ 2.1.163 (2.1.195+ preferred), `bash`, `python3`, `curl`, and a Z.ai credential — a **Coding Plan** subscription token or a metered **API key**.
+### Clone and install
 
 ```bash
-git clone https://github.com/AmbitiousRealism2025/Albion.git && cd Albion
-export ALBION_ZAI_TOKEN="<your Z.ai token>"   # plan lane is the default
+git clone https://github.com/AmbitiousRealism2025/Albion.git
+cd Albion
+./install.sh
+albion-setup
+albion-doctor --live
+albion
+```
+
+The installer adds symlinks under `~/.local/bin` by default. Pass
+`--prefix DIR` to use another directory. It does not read or write credentials.
+
+To try Albion without installing it:
+
+```bash
+export ALBION_ZAI_TOKEN="<your Z.ai token>"
 bin/albion-doctor --live
 bin/albion
 ```
 
-| Command | What it does |
+See the [GLM-5.2 setup guide](docs/glm-5.2-setup.md) for authentication lanes,
+environment overrides, and a manual Claude Code configuration.
+
+## What runs in an Albion session
+
+The `albion` launcher changes one process. It does not write the Z.ai endpoint,
+model mapping, charter, or effort level to your global Claude Code settings.
+
+For each invocation, the launcher:
+
+1. Selects the Z.ai endpoint and credential for the chosen authentication lane.
+2. Maps Claude Code's model slots to GLM models.
+3. Appends [`charter/ALBION.md`](charter/ALBION.md) to the system prompt.
+4. Loads the plugin and its permissions settings.
+5. Starts the stock `claude` binary.
+
+The plugin adds four groups of behavior:
+
+- The working board stores `task.md` and `verification.md` under
+  `.agent-workbench/fable-mode/`.
+- Hooks guard named destructive commands, redact recognized credentials from
+  board files, count failed tool use, restore state after compaction, and check
+  completion state when the session stops.
+- Five agents cover scouting, quick bounded work, counterexample search,
+  simplification, and verification. Skills load the longer procedures only
+  when the task calls for them.
+- `albion-vision` sends image requests to GLM-4.6V. `albion-metrics` calculates
+  cost from Z.ai usage rather than Claude Code's Anthropic price table.
+
+The hooks activate only when the launcher sets `ALBION_ACTIVE=1`. A stock
+`claude` session does not set that marker, even when the plugin is installed.
+Use `albion --vanilla` to run the same GLM configuration without the charter or
+plugin.
+
+## Commands
+
+| Command | Purpose |
 |---|---|
-| `albion` | GLM-5.2 + the ALBION.md charter + the enforcement plugin |
-| `albion --vanilla` | Bare GLM-5.2, no charter or plugin — compare for yourself |
-| `albion --doctor` / `albion-doctor --live` | Health matrix; non-zero exit on any red cell |
-| `albion-setup` | Interactively store your Z.ai (and optional vision) credentials |
-| `albion-vision <image>` | One-shot image description via GLM-4.6V (both auth lanes) |
-| `albion-compile --check` | Verifies the charter matches its `manifest/` source fragments |
+| `albion` | Start GLM-5.2 with the charter, plugin, and Albion settings |
+| `albion --vanilla` | Start GLM-5.2 without the charter or plugin |
+| `albion --dry-run` | Print the resolved configuration with the token masked |
+| `albion-doctor --live` | Check the local setup and make a one-token API probe |
+| `albion-setup` | Store the main and optional vision credentials |
+| `albion-vision <image>` | Describe an image with GLM-4.6V |
+| `albion-compile --check` | Check the compiled charter against `manifest/sections/` |
+| `albion-package` | Build a self-contained plugin directory under `dist/albion` |
 
-Auth lanes: `ALBION_AUTH_LANE=plan` (default; prompt-metered) or `api` (token-metered). Plan tokens work **only** on Z.ai's Anthropic-compatible endpoint — Albion routes this correctly and its diagnostics name the notorious `1113` wrong-lane error for what it is. For a metered main model with a separate GLM-4.6V key, set `ALBION_VISION_TOKEN` (and optionally `ALBION_VISION_LANE`). The full list of launcher environment overrides is in the [setup guide](docs/glm-5.2-setup.md).
+## Authentication
 
-## Runs alongside stock Claude Code
+Albion supports two Z.ai billing paths:
 
-You can try Albion **without disrupting your normal Claude Code.** Everything Albion changes — the Z.ai endpoint, the model, the charter, the plugin — is set *per invocation* by `bin/albion`; nothing is written to your shell profile or global config. So in one terminal `albion` runs GLM-5.2 with the full operating system, and in another `claude` runs stock Anthropic Claude, with zero interference. Even if you enable the Albion plugin globally from the marketplace, its hooks stay **inert in stock `claude` sessions** — they gate on a marker only the `albion` launcher sets. Albion also scopes its `xhigh` (GLM-max) effort to its own sessions, so it never changes how your stock Claude reasons.
+| Lane | Credential | Metering | Default endpoint |
+|---|---|---|---|
+| `plan` | GLM Coding Plan token | Provider plan quota | `https://api.z.ai/api/anthropic` |
+| `api` | Metered API key | Input and output tokens | `https://api.z.ai/api/anthropic` |
 
-## What's inside
+Set `ALBION_AUTH_LANE=plan` or `ALBION_AUTH_LANE=api`. The lane-specific token
+variables are `ALBION_ZAI_PLAN_TOKEN` and `ALBION_ZAI_API_KEY`.
+`ALBION_ZAI_TOKEN` is the fallback for either lane.
 
-1. **`charter/ALBION.md` — the operating document (always-on).** One
-   non-negotiable rule: every task above trivial opens a working board with a
-   definition of done and an evidence-backed verification record. Deep-analysis
-   discipline (state maps, competing hypotheses, counterexample-first recovery)
-   engages by escalation when a problem resists. Compiled from
-   `manifest/sections/` by `bin/albion-compile`, with a byte-exact drift gate.
-2. **On-demand skills & agents** (`plugin/`) — skills for delegation, recovery,
-   and completion; agents `scout`, `counterexample-hunter`, `verifier`,
-   `simplifier`, `quick`, each with wire-verified per-agent effort routing.
-3. **Hook enforcement suite** (`plugin/hooks`, `plugin/scripts`) —
-   destructive-command guard, strike counter, workbench secrets scrubber,
-   Stop-gate completion enforcement, post-compaction state re-injection, and
-   image-read interception. Every hook ships with recorded-payload tests plus a
-   live registration smoke-check; what hooks can and cannot defend is stated
-   honestly in [`docs/security-model.md`](docs/security-model.md).
-4. **Launcher + vision** (`bin/`) — Z.ai endpoint pinning, both auth lanes,
-   `glm-5.2[1m]` model slots, cache hygiene, loud startup validation; vision is
-   pluggable, with direct GLM-4.6V over HTTP as the default (no MCP
-   dependency).
+Z.ai currently lists Coding Plan subscriptions from $18 per month. Provider
+prices and quotas can change, so check [Z.ai's current documentation](https://docs.z.ai/guides/overview/quick-start)
+before making a cost decision.
 
-For orchestrating fleets — a frontier-model session conducting GLM-backed
-Albion workers over tmux — there is a documented conductor protocol and skill;
-Albion never *requires* it. See [`docs/build/orchestration.md`](docs/build/orchestration.md).
+## What the safety checks do
 
-## What to expect (measured, not promised)
+Albion is not a sandbox.
 
-Albion's benchmarks are public and honest about what the layer does and does
-not change:
+Claude Code's permissions deny rules form the hard floor for a short list of
+literal dangerous operations and credential paths. Albion's shell guard,
+secrets scrubber, and stop gate add checks above that floor. They are meant to
+catch mistakes and model drift, not a determined process with arbitrary shell
+access.
 
-- At maximum reasoning effort, GLM-5.2 **solves the bench tasks with or
-  without** the charter. Albion does not claim "solves more."
-- What the charter buys is **process you can trust**: an auditable working
-  board with a verification record, and recovery of the task state across
-  context resets — behaviors measured in controlled A/Bs, not asserted.
-- Real cost: a medium orchestrated task lands around **$1.20 on the API lane**
-  (warm cache), or **≈3 prompt-equivalents** on a Coding Plan whose $18/mo tier
-  covers 9–25 such tasks per 5-hour window.
+Important limits:
 
-The full evidence trail, methodology, and experiment logs are in the
-[development record](docs/build/README.md).
+- The command guard cannot recognize every runtime indirection or destructive
+  operation. Parser failures allow the command and write a log entry.
+- The scrubber runs after a board file is written and recognizes a finite list
+  of credential formats.
+- The stop gate reads agent-writable state. It checks for missing evidence and
+  open work, but it cannot judge whether the evidence is good or prevent state
+  tampering.
 
-## What's next
+Read the [security model](docs/security-model.md) before using Albion on
+sensitive work. Report security problems through the process in
+[`SECURITY.md`](SECURITY.md).
 
-Provider abstraction (a data-sovereignty toggle for US-resident hosts of the
-MIT open weights, or self-hosting), interactive conductor steering, and
-marketplace distribution. Further out: ports of the same manifest and
-conductor protocol to other coding CLIs.
+## Evidence and project history
 
-## Built in the open
+Albion keeps its build record in the repository. Start with:
 
-Albion was built by the pattern it ships — a frontier-model conductor
-dispatching reviewable work packets to a second AI over tmux, with mechanical
-acceptance gates before every merge — and the journal of that build is public,
-including the failures. The methodology, milestone trail, build logs, and
-empirical findings live in the [development record](docs/build/README.md).
+- [Development record](docs/build/README.md), the project history and current
+  roadmap.
+- [Field-tuning report](docs/build/log/023-field-tuning-round.md), the v0.3
+  validation batch and its limits.
+- [Benchmark documentation](bench/README.md), the task runner and record
+  format.
+- [First A/B report](bench/reports/m5-first-ab-report.md), the original small
+  comparison between Albion and vanilla GLM-5.2.
+- [Conductor protocol](docs/build/orchestration.md), the optional tmux workflow
+  used during development.
 
-## Contributing & security
+The repository also records an important failure. The hook configuration had
+the expected schema but did not load in live Claude Code sessions. An exit test
+found the problem, and the suite now includes a registration smoke test for
+that class of failure.
 
-Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the test suite, portability rules, and how changes are reviewed. Security reports: [`SECURITY.md`](SECURITY.md); the honest threat model is [`docs/security-model.md`](docs/security-model.md).
+## Data handling and unstable dependencies
 
-## Disclosures
+- Z.ai's first-party service processes prompts and code on infrastructure in
+  China. Do not send material that your policy forbids the provider from
+  receiving.
+- Albion depends on Claude Code's plugin schema, hook payloads, command-line
+  flags, and environment behavior. `albion-doctor` and the test suite detect
+  known breakage, but an upstream Claude Code release can still require an
+  Albion update.
+- Direct GLM-4.6V use with a Coding Plan token was established by live tests,
+  not provider documentation. `albion-doctor --live` checks that path before
+  you rely on it.
 
-- Z.ai first-party serving routes prompts/code through servers in China; the roadmap includes a provider-abstraction toggle (US-resident hosts of the MIT open weights, or self-hosting) with documented quantization-quality caveats.
-- Claude Code's built-in cost display is incorrect against non-Anthropic endpoints; Albion's telemetry is the source of truth.
-- Vision-model behavior on the plan lane relies on an entitlement Z.ai's documentation does not list; the doctor's live probe is the tripwire if it changes.
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CONVENTIONS.md`](CONVENTIONS.md)
+before changing code. Charter edits belong in `manifest/sections/`, not directly
+in the compiled `charter/ALBION.md` file.
+
+The [documentation index](docs/README.md) links the user, contributor, security,
+benchmark, and build records.
 
 ## License
 
