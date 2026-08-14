@@ -6,7 +6,7 @@ This document specifies the methodology. The per-milestone journal lives in [`lo
 
 ## Why build it this way
 
-1. **The subject must not be the builder.** GLM-5.2 is the model under test in this project. Building Albion *with* GLM would confound every observation — "is this bug the code or the coder?" The implementation lane therefore uses a different model entirely.
+1. **The subject must not be the builder.** GLM-5.3 is the model under test in this project. Building Albion *with* GLM would confound every observation — "is this bug the code or the coder?" The implementation lane therefore uses a different model entirely.
 2. **Model diversity catches monoculture bugs.** The conductor (Anthropic Claude, Fable 5) and the implementation lane (OpenAI GPT-5.5 via Codex CLI) have non-overlapping blind spots; the maintainer arbitrates.
 3. **Dogfooding the Conductor.** Albion's Conductor skill (proposal §7) prescribes exactly this topology — frontier judgment dispatching volume implementation over tmux with file-based completion signaling. Every friction point in the build feeds the skill's design before it ships.
 4. **The pattern is the point.** Orchestrating across vendors' coding CLIs — Claude Code, Codex CLI, and later Opencode and Pi — is a capability many people want and few have documented end-to-end. This build is the worked example.
@@ -18,7 +18,7 @@ This document specifies the methodology. The per-milestone journal lives in [`lo
 | **Maintainer** | AmbitiousRealism2025 | Direction, review of packet plans, final authority on scope and merges |
 | **Conductor** | Claude (Fable 5, later Opus 4.8) in Claude Code | Architecture, task decomposition into work packets, dispatch, fresh-context diff review against briefs, integration, git hygiene, build log |
 | **Implementation lane** | GPT-5.5 (high reasoning) via `codex exec` | Executes work packets: code + tests, headless, workspace-sandboxed |
-| **Test subject** | GLM-5.2 via Z.ai | Never builds; runs Albion sessions as experiment subjects (bench, A/B) |
+| **Test subject** | GLM-5.3 via Z.ai | Never builds; runs Albion sessions as experiment subjects (bench, A/B) |
 
 **A note on the conductor model.** The conductor ran on Claude Fable 5 through Milestone 0, Milestone 1, and most of Milestone 2. Partway through the Milestone 2 enforcement layer, a Fable-tier dual-use safeguard flagged the security-tooling content (the secrets scrubber and destructive-command guard necessarily contain the credential and attack patterns they defend against) and the session continued on Claude Opus 4.8. This is recorded plainly because the build log's value is its honesty: the security-dense milestones are a natural fit for Opus, and the reasoning- and design-heavy milestones (the charter and skills) are where the Fable tier earns its place. The methodology — a frontier Claude conducting GPT-5.5 workers with mechanical gates — is unchanged by which Claude tier holds the baton.
 

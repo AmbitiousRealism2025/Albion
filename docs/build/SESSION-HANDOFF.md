@@ -12,15 +12,15 @@ This is the rehydration document for a new conductor session. It exists because 
 **Conductor for the next session:** Fable 5 — **but VERIFY the live model every session** (statusline shows it): Fable's safeguard silently fell back to Opus 4.8 at the M3→M4 boundary and it went unnoticed for ~15.5h; M4–M6 were actually Opus-conducted (build log 017, post-M6 audit: directionally sound, deny floor wired as the one real fix).
 
 ### Full inventory of what is built & merged (all CI-green)
-- **Launcher** `bin/albion` — modes: default / `--vanilla` (bare-GLM A/B control) / `--doctor` / `--dry-run`; both auth lanes; pins `--model glm-5.2[1m]`; injects the charter (`--append-system-prompt`), the plugin (`--plugin-dir`, default mode only), and a scoped effort config (`--settings config/albion-settings.json`); exports `ALBION_ACTIVE=1` when the plugin loads.
-- **Doctor** `bin/albion-doctor` — check registry (env, claude-binary, version, endpoint-shape, tmux, fixtures, hook-suite, manifest, vision, effort) + `--live` (1-token probe, verified `HTTP 200 model=glm-5.2`).
+- **Launcher** `bin/albion` — modes: default / `--vanilla` (bare-GLM A/B control) / `--doctor` / `--dry-run`; both auth lanes; pins `--model glm-5.3[1m]`; injects the charter (`--append-system-prompt`), the plugin (`--plugin-dir`, default mode only), and a scoped effort config (`--settings config/albion-settings.json`); exports `ALBION_ACTIVE=1` when the plugin loads.
+- **Doctor** `bin/albion-doctor` — check registry (env, claude-binary, version, endpoint-shape, tmux, fixtures, hook-suite, manifest, vision, effort) + `--live` (1-token probe, verified `HTTP 200 model=glm-5.3`).
 - **Enforcement layer** (`state/` engine + 6 hooks in `plugin/scripts/`): destructive-command guard, strike counter, workbench scrubber, **Stop completion gate** (keystone; writes the completion-manifest done-signal), SessionStart re-injection, image-read interception. **All 6 gate on `ALBION_ACTIVE`** (inert in stock claude). Wired in `plugin/hooks/hooks.json` (string-form commands — array-form was silently ignored, log 012). Live registration proven by `tests/tools/verify-registration.sh`.
 - **Charter** `charter/ALBION.md` — **v0.3**, 246 lines (v0.2 trim + ALB-033 verification standards); compiled from `manifest/sections/` by `bin/albion-compile` (`--check` drift gate). Every charter change is sealed behind a pre-registered headless A/B (logs 022, 023).
 - **Skills** (`plugin/skills/`): maturity-assessment, delegation, recovery, completion-gate, conductor, hot-path, toolchain-fidelity, + vendored standalone fable-mode. **Agents** (`plugin/agents/`): scout, counterexample-hunter, verifier, simplifier, quick.
 - **Vision** `bin/albion-vision` — direct GLM-4.6V, both lanes, no MCP; `ALBION_VISION_TOKEN`/`ALBION_VISION_LANE` for a separate metered 4.6V key.
 - **Telemetry** `telemetry/albion-metrics` (dual cost model; harness `total_cost_usd` proven ~2.7× overstated). **Bench** `bench/run-task` + `bench/report` + the task corpus under `bench/tasks/` (incl. the board-stressing `retry-idempotency` ALB-026, the hidden-holdout `grade-integrity` ALB-027, and the long-horizon `revenue-pipeline` ALB-028); first A/B report at `bench/reports/m5-first-ab-report.md`. `--vanilla` is a true-bare control (the launcher appends `--disable-slash-commands`). **Since ALB-029 the bench discriminates on process:** run records are `albion-bench-run/v2` with a `workbench` object (artifact inventory + `evidence_complete`, stop-gate-aligned), and `bench/report` adds `evidence` / `evidence_complete_rate` columns; v1 records stay ingestible (build log 019).
 - **Distribution:** `install.sh` (fresh-machine, symlinks the tools), `bin/albion-setup` (interactive creds → mode-600 secrets), `bin/albion-package` (builds a **self-contained plugin** dir carrying the launcher; launcher/doctor/hooks are layout-agnostic — verified live from the packaged dist). CI is SHA-pinned + least-privilege; community files + CHANGELOG in place.
-- **Docs:** README is **purely user-facing** (product page: install, quickstart, coexistence, honest expectations, disclosures); the development history (status, methodology, journal highlights, milestone trail, findings) lives at `docs/build/README.md` — keep diary-type material THERE, not in the README. Plus `docs/glm-5.2-setup.md`, `docs/packaging.md`, `docs/security-model.md`, `docs/build/orchestration.md`, build logs 000–023.
+- **Docs:** README is **purely user-facing** (product page: install, quickstart, coexistence, honest expectations, disclosures); the development history (status, methodology, journal highlights, milestone trail, findings) lives at `docs/build/README.md` — keep diary-type material THERE, not in the README. Plus `docs/glm-5.3-setup.md`, `docs/packaging.md`, `docs/security-model.md`, `docs/build/orchestration.md`, build logs 000–023.
 
 ### >>> THE MOST IMPORTANT THING: design decisions queued for the maintainer <<<
 From the **log-014** long-horizon A/B diagnostic (4 runs on a real 350k-LOC repo; reports at `~/Desktop/albion-factory-analysis/`). These are **n=1 hypotheses NOT to act on autonomously** — they were explicitly left for the maintainer:
@@ -51,7 +51,7 @@ From the **log-014** long-horizon A/B diagnostic (4 runs on a real 350k-LOC repo
 
 ## [STABLE] How this project is built
 
-**The methodology** (full detail in `docs/build/orchestration.md`): a frontier Claude **conductor** decomposes milestones into 7-section work packets and dispatches them to **GPT-5.5 via `codex exec`** in tmux; **GLM-5.2 never builds** (it is the test subject). The conductor reviews every diff against the brief, runs the tests itself, owns all git, and journals each cycle. The build log is deliberately honest (failures, reworks, and conductor mistakes included) because that honesty is its value for the OSS-grant story.
+**The methodology** (full detail in `docs/build/orchestration.md`): a frontier Claude **conductor** decomposes milestones into 7-section work packets and dispatches them to **GPT-5.5 via `codex exec`** in tmux; **GLM-5.3 never builds** (it is the test subject). The conductor reviews every diff against the brief, runs the tests itself, owns all git, and journals each cycle. The build log is deliberately honest (failures, reworks, and conductor mistakes included) because that honesty is its value for the OSS-grant story.
 
 ### The dispatch loop (mechanical steps)
 1. Write the brief: `docs/build/packets/ALB-<n>.md` (7 sections), commit it.
@@ -72,7 +72,7 @@ From the **log-014** long-horizon A/B diagnostic (4 runs on a real 350k-LOC repo
 - Worker-implemented commits also add: `Co-Authored-By: GPT-5.5 via Codex CLI <noreply@openai.com>`.
 
 ### Key config facts (empirically locked — see memory + research reports)
-- Launcher must pin `--model glm-5.2[1m]` (the user's global settings pin a Fable model that otherwise reaches Z.ai and 400s).
+- Launcher must pin `--model glm-5.3[1m]` (the user's global settings pin a Fable model that otherwise reaches Z.ai and 400s).
 - Never set `CLAUDE_CODE_EFFORT_LEVEL` (kills per-task frontmatter effort routing).
 - `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` forces headless permission mode to default (breaks scripted `acceptEdits`) — env default is 0.
 - Effort has three effective tiers via Z.ai: off / GLM-high / GLM-max.
@@ -89,5 +89,5 @@ From the **log-014** long-horizon A/B diagnostic (4 runs on a real 350k-LOC repo
 | Conventions (read before coding) | `CONVENTIONS.md` |
 | Project memory (auto-loaded) | `~/.claude/projects/…/memory/` (indexed by `MEMORY.md`) |
 | Shipped code | `bin/` (albion, -doctor, -vision, -compile, -setup, -package), `env/`, `charter/`, `config/`, `manifest/`, `state/`, `plugin/`, `telemetry/`, `bench/` |
-| Distribution / setup docs | `docs/glm-5.2-setup.md`, `docs/packaging.md`; `install.sh` at repo root |
+| Distribution / setup docs | `docs/glm-5.3-setup.md`, `docs/packaging.md`; `install.sh` at repo root |
 | Vision-lane probe (local-only) | `docs/research/reports/11-glm-4.6v-plan-lane-probe.md` |

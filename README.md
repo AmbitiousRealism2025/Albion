@@ -5,7 +5,7 @@ https://github.com/user-attachments/assets/df653b40-7605-4022-a802-2dd6d136db2c
 [![CI](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml/badge.svg)](https://github.com/AmbitiousRealism2025/Albion/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Run Claude Code on Z.ai's GLM-5.2 with a working board, completion checks,
+Run Claude Code on Z.ai's GLM-5.3 with a working board, completion checks,
 specialist agents, vision, and cost telemetry.
 
 Albion is an MIT-licensed launcher and Claude Code plugin. It points the stock
@@ -20,7 +20,7 @@ when the recorded work is still open.
 
 ## Why Albion exists
 
-GLM-5.2 has open weights, selectable reasoning effort, and a 1 million token
+GLM-5.3 has open weights, selectable reasoning effort, and a 1 million token
 context window. Z.ai also offers it through GLM Coding Plan. Those properties
 make it useful for long coding tasks, but a large context window does not keep
 an agent honest or organized by itself.
@@ -84,7 +84,7 @@ bin/albion-doctor --live
 bin/albion
 ```
 
-See the [GLM-5.2 setup guide](docs/glm-5.2-setup.md) for authentication lanes,
+See the [GLM-5.3 setup guide](docs/glm-5.3-setup.md) for authentication lanes,
 environment overrides, and a manual Claude Code configuration.
 
 ## What runs in an Albion session
@@ -122,8 +122,8 @@ plugin.
 
 | Command | Purpose |
 |---|---|
-| `albion` | Start GLM-5.2 with the charter, plugin, and Albion settings |
-| `albion --vanilla` | Start GLM-5.2 without the charter or plugin |
+| `albion` | Start GLM-5.3 with the charter, plugin, and Albion settings |
+| `albion --vanilla` | Start GLM-5.3 without the charter or plugin |
 | `albion --dry-run` | Print the resolved configuration with the token masked |
 | `albion-doctor --live` | Check the local setup and make a one-token API probe |
 | `albion-setup` | Store the main and optional vision credentials |

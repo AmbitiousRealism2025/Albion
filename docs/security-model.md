@@ -10,7 +10,7 @@ Albion defends in depth, and the layers are not equal in strength:
 2. **The enforcement hooks (best-effort defense-in-depth).** The destructive-command guard, secrets scrubber, and Stop gate are **speed-bumps and backstops**, not security boundaries. They add coverage and catch honest mistakes and reward-hacking drift by a *semi-trusted model*. They are not designed to stop a determined adversary who already has arbitrary shell access — no denylist can, because a shell has infinitely many equivalent encodings of any command.
 3. **Human and harness oversight.** Permission prompts, plan mode, and the maintainer remain the ultimate control.
 
-**The threat Albion actually targets:** a capable but imperfect model (GLM-5.2) that may drift, hallucinate progress, or reach for a destructive shortcut — not a malicious operator. Read every hook guarantee in that light.
+**The threat Albion actually targets:** a capable but imperfect model (GLM-5.3) that may drift, hallucinate progress, or reach for a destructive shortcut — not a malicious operator. Read every hook guarantee in that light.
 
 ## Destructive-command guard (`pre-tool-guard.sh`)
 

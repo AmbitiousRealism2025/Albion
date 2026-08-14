@@ -1,13 +1,13 @@
 ---
-name: fable-mode-glm-5-2
-description: Use when explicitly invoked as "fable-mode" for GLM-5.2, or when GLM-5.2 is handling complex long-horizon coding, debugging, refactoring, architecture, migration, performance, research, or proof-like work where correctness depends on sustained reasoning, tool evidence, state definitions, memory, and verification. Do not use for trivial edits, simple Q&A, copyediting, or tasks where the user only wants a brief answer.
+name: fable-mode-glm-5-3
+description: Use when explicitly invoked as "fable-mode" for GLM-5.3, or when GLM-5.3 is handling complex long-horizon coding, debugging, refactoring, architecture, migration, performance, research, or proof-like work where correctness depends on sustained reasoning, tool evidence, state definitions, memory, and verification. Do not use for trivial edits, simple Q&A, copyediting, or tasks where the user only wants a brief answer.
 ---
 
-# Fable-mode for GLM-5.2
+# Fable-mode for GLM-5.3
 
-This skill is an experimental operating mode for GLM-5.2. It does not imitate another model's private reasoning or expose chain-of-thought. It borrows public, observable operating patterns: adaptive depth, acting once enough context exists, explicit boundaries, evidence-grounded progress, verifier loops, compact memory, and clean final communication.
+This skill is an experimental operating mode for GLM-5.3. It does not imitate another model's private reasoning or expose chain-of-thought. It borrows public, observable operating patterns: adaptive depth, acting once enough context exists, explicit boundaries, evidence-grounded progress, verifier loops, compact memory, and clean final communication.
 
-The goal is to turn GLM-5.2's inexpensive long-horizon reasoning into disciplined agentic execution instead of token fog.
+The goal is to turn GLM-5.3's inexpensive long-horizon reasoning into disciplined agentic execution instead of token fog.
 
 ## Activation contract
 
@@ -20,13 +20,13 @@ When this skill is active:
 5. Do not claim progress unless the claim is backed by a tool result, file observation, diff, test output, or recorded source.
 6. Do not expose raw reasoning. Summarize decisions through definitions, assumptions, evidence, tests, counterexamples, and remaining risk.
 
-## Recommended GLM-5.2 harness settings
+## Recommended GLM-5.3 harness settings
 
 For hard coding, architecture, algorithmic, or long-horizon agent tasks, prefer:
 
 ```json
 {
-  "model": "glm-5.2",
+  "model": "glm-5.3",
   "thinking": { "type": "enabled" },
   "reasoning_effort": "max",
   "stream": true

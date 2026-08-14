@@ -1,6 +1,6 @@
-# Run Claude Code on GLM-5.2
+# Run Claude Code on GLM-5.3
 
-Albion runs the stock Claude Code CLI against Z.ai's GLM-5.2 API. It does not
+Albion runs the stock Claude Code CLI against Z.ai's GLM-5.3 API. It does not
 patch the CLI. The launcher sets the API endpoint, credential, model mapping,
 charter, plugin, and Albion settings for one process.
 
@@ -60,22 +60,22 @@ the credential and endpoint belong to different billing paths.
 
 ## Manual Claude Code configuration
 
-You can run GLM-5.2 without the Albion charter or plugin. Set the environment
+You can run GLM-5.3 without the Albion charter or plugin. Set the environment
 that Albion normally owns:
 
 ```bash
 export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
 export ANTHROPIC_AUTH_TOKEN="<your Z.ai token>"
 
-export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.2[1m]"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.3[1m]"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2[1m]"
 export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"
 
-claude --model 'glm-5.2[1m]'
+claude --model 'glm-5.3[1m]'
 ```
 
 The `[1m]` suffix selects the 1 million token context variant. Z.ai describes
-that context window in its [GLM-5.2 release note](https://z.ai/blog/glm-5.2).
+that context window in its [GLM-5.3 release note](https://z.ai/blog/glm-5.3).
 
 Do not set `CLAUDE_CODE_EFFORT_LEVEL` for Albion. Claude Code treats it as a
 global override, which prevents Albion's agents and skills from selecting their
@@ -92,7 +92,7 @@ own effort. Albion passes a session settings file with `effortLevel` set to
 | `ALBION_ZAI_PLAN_TOKEN` | Credential for the plan lane |
 | `ALBION_ZAI_API_KEY` | Credential for the API lane |
 | `ALBION_ZAI_TOKEN` | Fallback credential for either lane |
-| `ALBION_MODEL` | Model passed to `claude --model`; defaults to `glm-5.2[1m]` |
+| `ALBION_MODEL` | Model passed to `claude --model`; defaults to `glm-5.3[1m]` |
 | `ALBION_CHARTER` | Alternate charter path, used by A/B experiments |
 | `ALBION_ALLOW_OVERRIDES` | Preserve existing Claude Code model mappings when set to `1` |
 | `ALBION_VISION_TOKEN` | Separate credential for GLM-4.6V |
@@ -142,7 +142,7 @@ plugin inert in an ordinary `claude` session.
 You can therefore run these in separate terminals:
 
 ```text
-albion    GLM-5.2 with the Albion charter and plugin
+albion    GLM-5.3 with the Albion charter and plugin
 claude    your normal Claude Code configuration
 ```
 

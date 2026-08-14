@@ -12,7 +12,7 @@ workflow used to build the project is in
 
 Albion succeeds [Atreides](https://github.com/AmbitiousRealism2025/Atreides).
 Atreides used prompt instructions to organize Anthropic Claude. Albion runs
-Claude Code with Z.ai's GLM-5.2 and moves some of that organization into files,
+Claude Code with Z.ai's GLM-5.3 and moves some of that organization into files,
 hooks, permissions, and tests.
 
 The design assumes a capable model can still drift during a long task. Albion

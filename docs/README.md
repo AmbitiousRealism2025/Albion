@@ -4,7 +4,7 @@ Use this page to find the shortest route into Albion's documentation.
 
 ## Use Albion
 
-- [GLM-5.2 setup](glm-5.2-setup.md) covers installation, authentication lanes,
+- [GLM-5.3 setup](glm-5.3-setup.md) covers installation, authentication lanes,
   manual Claude Code configuration, vision, and troubleshooting.
 - [Security model](security-model.md) states what the permissions rules and
   hooks can and cannot stop.

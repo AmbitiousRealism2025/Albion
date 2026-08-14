@@ -1,10 +1,10 @@
-# GLM-5.2 Run Config Notes
+# GLM-5.3 Run Config Notes
 
 ## Z.AI standard API, hard agentic task
 
 ```json
 {
-  "model": "glm-5.2",
+  "model": "glm-5.3",
   "messages": [],
   "thinking": { "type": "enabled" },
   "reasoning_effort": "max",
@@ -21,7 +21,7 @@ Use `clear_thinking: false` only when the harness can preserve prior `reasoning_
 
 ```json
 {
-  "model": "glm-5.2",
+  "model": "glm-5.3",
   "messages": [],
   "thinking": { "type": "enabled" },
   "reasoning_effort": "high",
@@ -34,7 +34,7 @@ Use `clear_thinking: false` only when the harness can preserve prior `reasoning_
 
 ```json
 {
-  "model": "glm-5.2",
+  "model": "glm-5.3",
   "messages": [],
   "thinking": { "type": "disabled" },
   "stream": true,
@@ -46,7 +46,7 @@ Use only for trivial tasks where the skill should not activate.
 
 ## Together AI note
 
-Together's GLM-5.2 endpoint documents streaming tool calls without a separate `tool_stream` parameter. Use provider-specific docs rather than copying Z.AI parameters blindly.
+Together's GLM-5.3 endpoint documents streaming tool calls without a separate `tool_stream` parameter. Use provider-specific docs rather than copying Z.AI parameters blindly.
 
 ## Safety note
 

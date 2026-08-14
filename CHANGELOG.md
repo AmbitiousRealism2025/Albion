@@ -5,7 +5,28 @@ All notable changes to Albion are recorded here. This project adheres to
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- Model tier remap for Z.ai's GLM-5.3 release: the Opus-equivalent slot
+  (including the `albion` launcher default and `ALBION_MODEL` fallback) is now
+  `glm-5.3[1m]`; the Sonnet-equivalent slot remains `glm-5.2[1m]`; the
+  Haiku-equivalent slot remains `glm-5-turbo`. The charter, doctor live-probe
+  validation, plugin description, and living documentation follow the flagship.
+  GLM-5.3 pricing is not yet published, so `telemetry/albion-metrics` carries a
+  `glm-5.3` price row of `null` — API-lane sessions on the flagship report
+  `cost.pricing_incomplete: true` until Z.ai publishes rates.
+- Renamed the flagship skill `fable-mode-glm-5-2` to `fable-mode-glm-5-3`
+  (directory, skill name, manifest id/path, and pack docs). The invocation
+  trigger "fable-mode" and the `.agent-workbench/fable-mode/` layout are
+  unchanged. If you installed the old skill at user scope
+  (`~/.claude/skills/fable-mode-glm-5-2` or `.agents/skills/…`), remove the
+  stale copy to avoid two flagship skills being visible.
+- Renamed `docs/glm-5.2-setup.md` to `docs/glm-5.3-setup.md` and updated its
+  manual-config snippets; the sonnet slot in those snippets deliberately stays
+  `glm-5.2[1m]`.
+- Historical build records (`docs/build/log/`, `docs/build/packets/`,
+  `docs/proposal/`, `docs/research/`) intentionally keep their GLM-5.2-era
+  text: they document runs that happened on that model.
 
 ## [0.3.0] — 2026-07-06
 
@@ -69,7 +90,7 @@ real endpoint.
 - Hook **registration** smoke-check — verifies Claude Code actually loads the
   plugin hooks, not just that the scripts run when invoked directly.
 - GitHub community files: issue forms, pull-request template, `CODEOWNERS`,
-  `CONTRIBUTING.md`, `SECURITY.md`; and a [GLM-5.2 setup guide](docs/glm-5.2-setup.md).
+  `CONTRIBUTING.md`, `SECURITY.md`; and a [GLM-5.2 setup guide](docs/glm-5.3-setup.md).
 - `albion-doctor` **effort** check — verifies Albion's shipped effort config is
   `xhigh` (GLM-max), the depth Albion's design requires.
 
