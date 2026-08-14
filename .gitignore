@@ -22,5 +22,8 @@ docs/research/reports/
 # Logs
 *.log
 
+# Personal todo notes — local only
+todo/
+
 # Packaged self-contained plugin (build artifact)
 dist/
