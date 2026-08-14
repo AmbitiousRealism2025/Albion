@@ -608,11 +608,11 @@ check_live_probe() {
 
   response_model="$(printf '%s' "$body" | json_value "model")"
   case "$response_model" in
-    glm-5.2*)
+    glm-5.3*)
       record_check "PASS" "live-probe" "HTTP 200 model=${response_model}"
       ;;
     *)
-      record_check "FAIL" "live-probe" "HTTP 200 model=${response_model:-unknown}; expected glm-5.2*, possible silent slot remap"
+      record_check "FAIL" "live-probe" "HTTP 200 model=${response_model:-unknown}; expected glm-5.3*, possible silent slot remap"
       ;;
   esac
 }

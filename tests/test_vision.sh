@@ -100,7 +100,7 @@ case "$scenario" in
     if printf '%s' "$payload" | grep -q '"model":"glm-4.6v"'; then
       printf '{"content":[{"type":"text","text":"doctor vision probe"}]}\n200'
     else
-      printf '{"model":"glm-5.2"}\n200'
+      printf '{"model":"glm-5.3"}\n200'
     fi
     ;;
   *)

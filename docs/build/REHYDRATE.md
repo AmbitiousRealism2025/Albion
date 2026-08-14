@@ -11,7 +11,7 @@ frontier model and want to avoid an unwanted mid-session model change, work from
 ## What Albion is
 
 Albion lets the Claude Code CLI run on an alternative large language model
-(GLM-5.2, served over a compatible API endpoint) instead of the default. It is
+(GLM-5.3, served over a compatible API endpoint) instead of the default. It is
 an MIT-licensed, open-source configuration layer. The pieces:
 
 - **A launcher** (`bin/albion`) that points the CLI at the alternative endpoint,

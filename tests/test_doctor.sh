@@ -152,7 +152,7 @@ case "$scenario" in
         printf '{"content":[{"type":"text","text":"probe image described"}]}\n200'
         ;;
       *)
-        printf '{"model":"glm-5.2"}\n200'
+        printf '{"model":"glm-5.3"}\n200'
         ;;
     esac
     ;;
@@ -273,11 +273,11 @@ RUN_ENV=(
   "ALBION_CURL_RECORD=${curl_record}"
 )
 run_doctor "live-success" --live
-assert_exit_code 0 "$RUN_CODE" "live probe accepts glm-5.2 response"
-assert_contains "$RUN_STDOUT" "PASS live-probe: HTTP 200 model=glm-5.2" "live success reports response model"
+assert_exit_code 0 "$RUN_CODE" "live probe accepts glm-5.3 response"
+assert_contains "$RUN_STDOUT" "PASS live-probe: HTTP 200 model=glm-5.3" "live success reports response model"
 assert_contains "$RUN_STDOUT" "10 pass, 0 fail, 1 warn, 0 skip" "live success summary counts"
 assert_contains "$(cat "$curl_record")" "url=https://api.z.ai/api/anthropic/v1/messages" "live probe posts to messages endpoint"
-assert_contains "$(cat "$curl_record")" '"model":"glm-5.2"' "live probe strips [1m] suffix from model"
+assert_contains "$(cat "$curl_record")" '"model":"glm-5.3"' "live probe strips [1m] suffix from model"
 assert_not_contains "$RUN_STDOUT" "secret-token" "live success stdout never prints token"
 assert_not_contains "$RUN_STDERR" "secret-token" "live success stderr never prints token"
 

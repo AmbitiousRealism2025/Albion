@@ -2,6 +2,12 @@
 
 Date: 2026-07-02
 
+> Provenance note (2026-08-14): this brief was researched and written against
+> GLM-5.2. The skill now targets GLM-5.3, which shares GLM-5.2's base model,
+> 1M context window, 128K maximum output, and thinking modes. The findings and
+> design rationale below carry over; GLM-5.2-specific pricing and benchmark
+> figures are historical.
+
 ## Purpose
 
 This brief summarizes public research into Claude Fable 5 and GLM-5.2, then proposes a practical `fable-mode` skill for GLM-5.2. The intent is not to copy private chain-of-thought. The intent is to extract reusable operating patterns that can be externalized into files, tests, verifier loops, and communication rules.

@@ -1,15 +1,15 @@
-# A/B Test Plan for Fable-mode GLM-5.2
+# A/B Test Plan for Fable-mode GLM-5.3
 
 ## Purpose
 
-Measure whether `fable-mode` improves GLM-5.2 on the user's real work, not just benchmark-shaped tasks.
+Measure whether `fable-mode` improves GLM-5.3 on the user's real work, not just benchmark-shaped tasks.
 
 ## Conditions
 
 Run each task under at least two conditions:
 
-A. GLM-5.2 baseline with your normal prompt.
-B. GLM-5.2 with `fable-mode-glm-5-2`.
+A. GLM-5.3 baseline with your normal prompt.
+B. GLM-5.3 with `fable-mode-glm-5-3`.
 
 Optional:
 
