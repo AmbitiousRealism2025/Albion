@@ -20,9 +20,12 @@
 #
 # Export semantics:
 #   Core routing is Albion-owned. ANTHROPIC_BASE_URL and ANTHROPIC_AUTH_TOKEN
-#   are hard-set every time; ANTHROPIC_DEFAULT_OPUS_MODEL,
-#   ANTHROPIC_DEFAULT_SONNET_MODEL, and ANTHROPIC_DEFAULT_HAIKU_MODEL are
-#   hard-set unless ALBION_ALLOW_OVERRIDES=1.
+#   are hard-set every time; ANTHROPIC_DEFAULT_OPUS_MODEL and
+#   ANTHROPIC_DEFAULT_HAIKU_MODEL are hard-set unless ALBION_ALLOW_OVERRIDES=1.
+#   ANTHROPIC_DEFAULT_SONNET_MODEL is never set on purpose: leaving the sonnet
+#   slot unmapped is what keeps Claude Code's auto-mode permission classifier
+#   on its fast claude-sonnet-5 default instead of the session's reasoning
+#   model (see the comment at the model block below).
 #   Tuning/hardening values are export-if-unset, so callers can deliberately
 #   override API_TIMEOUT_MS, CLAUDE_CODE_AUTO_COMPACT_WINDOW,
 #   CLAUDE_CODE_MAX_OUTPUT_TOKENS, CLAUDE_CODE_ATTRIBUTION_HEADER,
@@ -89,14 +92,25 @@ esac
 export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
 export ANTHROPIC_AUTH_TOKEN="${albion_auth_token}"
 
+# ANTHROPIC_DEFAULT_SONNET_MODEL is deliberately not exported here. Claude
+# Code's auto-mode permission classifier resolves its fast Sonnet default
+# through the sonnet slot; mapping that slot onto the session's reasoning
+# model (glm-5.2[1m]) pins every permission check onto a ~110K-char classifier
+# prompt that takes 12-20s+ and times out under Z.AI latency swings
+# ("glm-5.2[1m] is temporarily unavailable (timed out), so auto mode cannot
+# determine the safety of ..."). Unmapped, the classifier keeps its
+# claude-sonnet-5 default, which Z.AI serves as glm-4.7 in ~2s (verified
+# 2026-08-14, Claude Code 2.1.231). Sessions that want glm-5.2 as the main
+# model pin it directly via --model or settings "model", as bin/albion does.
+# Default mode also unsets a stale exported value so terminals opened before
+# this change cannot leak the slow classifier routing into new sessions.
 if [ "${ALBION_ALLOW_OVERRIDES:-}" = "1" ]; then
   export ANTHROPIC_DEFAULT_OPUS_MODEL="${ANTHROPIC_DEFAULT_OPUS_MODEL:-glm-5.3[1m]}"
-  export ANTHROPIC_DEFAULT_SONNET_MODEL="${ANTHROPIC_DEFAULT_SONNET_MODEL:-glm-5.2[1m]}"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="${ANTHROPIC_DEFAULT_HAIKU_MODEL:-glm-5-turbo}"
 else
   export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.3[1m]"
-  export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2[1m]"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"
+  unset ANTHROPIC_DEFAULT_SONNET_MODEL
 fi
 
 if [ -z "${API_TIMEOUT_MS+x}" ]; then

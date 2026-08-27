@@ -71,7 +71,7 @@ assert_common_exports() {
   assert_export "$output" "ANTHROPIC_BASE_URL" "https://api.z.ai/api/anthropic"
   assert_export "$output" "ANTHROPIC_AUTH_TOKEN" "$token"
   assert_export "$output" "ANTHROPIC_DEFAULT_OPUS_MODEL" "glm-5.3[1m]"
-  assert_export "$output" "ANTHROPIC_DEFAULT_SONNET_MODEL" "glm-5.2[1m]"
+  assert_not_contains "$output" "ANTHROPIC_DEFAULT_SONNET_MODEL=" "script leaves the sonnet slot unmapped so the auto-mode classifier keeps its fast default"
   assert_export "$output" "ANTHROPIC_DEFAULT_HAIKU_MODEL" "glm-5-turbo"
   assert_export "$output" "API_TIMEOUT_MS" "3000000"
   assert_export "$output" "CLAUDE_CODE_AUTO_COMPACT_WINDOW" "1000000"
@@ -145,7 +145,7 @@ assert_export "$RUN_STDOUT" "CLAUDE_CODE_AUTO_COMPACT_WINDOW" "1000000"
 assert_export "$RUN_STDOUT" "ANTHROPIC_BASE_URL" "https://api.z.ai/api/anthropic"
 assert_export "$RUN_STDOUT" "ANTHROPIC_AUTH_TOKEN" "plan-token"
 assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_OPUS_MODEL" "glm-5.3[1m]"
-assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_SONNET_MODEL" "glm-5.2[1m]"
+assert_not_contains "$RUN_STDOUT" "ANTHROPIC_DEFAULT_SONNET_MODEL=" "hard-set mode unsets the sonnet slot even when a stale shell exports it"
 assert_export "$RUN_STDOUT" "ANTHROPIC_DEFAULT_HAIKU_MODEL" "glm-5-turbo"
 
 run_source_capture "double-source" \
