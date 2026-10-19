@@ -169,6 +169,7 @@ while they run, then reconcile findings.
 | `scout` | high | Find files, prior art, API contracts; read-only | Findings ≤500 words |
 | `counterexample-hunter` | xhigh | Break the current hypothesis | Failing case, or "no break found" + what was tried |
 | `verifier` | xhigh | Fresh-context review of the final patch vs `task.md` + tests | Pass/fail per check, findings |
+| `source-verifier` | high | Re-fetch cited URLs in a research artifact; read-only, no Bash | Status + quoted evidence per claim |
 | `simplifier` | high | Detect scope drift and unnecessary abstraction vs `task.md`; read-only | Drift list with locations |
 
 Delegation rules:

@@ -203,6 +203,7 @@ If subagents are available, delegate independent work. Useful roles:
 - `scout`: find relevant files, prior art, or API contracts;
 - `counterexample-hunter`: search for cases that break the current theory;
 - `verifier`: review the final patch against the task and tests;
+- `source-verifier`: re-fetch cited URLs and check the claims they support;
 - `simplifier`: identify unnecessary abstraction or scope drift.
 
 The main agent should keep working while independent subagents run, then reconcile their findings.

@@ -29,6 +29,12 @@ expected = {
         "model": None,
         "forbidden_tools": set(),
     },
+    "source-verifier": {
+        "tools": {"Read", "Grep", "Glob", "WebFetch"},
+        "effort": "high",
+        "model": None,
+        "forbidden_tools": {"Write", "Edit", "Bash"},
+    },
     "simplifier": {
         "tools": {"Read", "Grep", "Glob"},
         "effort": "high",

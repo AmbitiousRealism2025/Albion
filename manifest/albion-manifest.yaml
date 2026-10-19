@@ -62,5 +62,7 @@ agents:
     path: plugin/agents/scout.md
   - id: simplifier
     path: plugin/agents/simplifier.md
+  - id: source-verifier
+    path: plugin/agents/source-verifier.md
   - id: verifier
     path: plugin/agents/verifier.md
