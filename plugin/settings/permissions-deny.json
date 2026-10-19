@@ -27,14 +27,14 @@
       "Read(**/*.pem)",
       "Read(**/*.key)",
       "Read(**/*credentials*)",
-      "Write(.env)",
-      "Write(**/.env)",
-      "Write(**/secrets/**)",
-      "Write(~/.ssh/**)",
-      "Write(~/.aws/**)",
-      "Write(**/*.pem)",
-      "Write(**/*.key)",
-      "Write(**/*credentials*)"
+      "Edit(.env)",
+      "Edit(**/.env)",
+      "Edit(**/secrets/**)",
+      "Edit(~/.ssh/**)",
+      "Edit(~/.aws/**)",
+      "Edit(**/*.pem)",
+      "Edit(**/*.key)",
+      "Edit(**/*credentials*)"
     ]
   }
 }
