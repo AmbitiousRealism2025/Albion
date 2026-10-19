@@ -99,6 +99,12 @@ own effort. Albion passes a session settings file with `effortLevel` set to
 | `ALBION_VISION_TOKEN` | Separate credential for vision (GLM-5.3-Flash) |
 | `ALBION_VISION_LANE` | Billing lane for the separate vision credential |
 
+Sessions start in Claude Code's auto permission mode (`permissions.defaultMode`
+in `config/albion-settings.json`), so long or unattended runs don't wait on
+approval prompts. The deny rules in the same file still apply. Pass
+`--permission-mode default` (or another mode) to `albion` to override it for one
+session.
+
 The header in [`env/albion-env.sh`](../env/albion-env.sh) documents the tuning
 variables for timeouts, compaction, output limits, and subprocess behavior.
 

@@ -94,3 +94,18 @@ then
   assert_fail "deny floor drift between wired settings and the stock fragment"
 fi
 printf 'ok - wired deny floor matches plugin/settings/permissions-deny.json\n'
+
+# --- unattended runs start in auto mode ---------------------------------------
+# Albion sessions are often left running (tmux workers, long research runs), so
+# the injected settings default to auto mode instead of stopping for approvals.
+# The deny floor above still applies; an explicit --permission-mode overrides.
+
+if ! python3 - "${ROOT_DIR}/config/albion-settings.json" <<'PY'
+import json, sys
+mode = json.load(open(sys.argv[1])).get("permissions", {}).get("defaultMode")
+assert mode == "auto", f"permissions.defaultMode must be 'auto', got {mode!r}"
+PY
+then
+  assert_fail "injected settings layer must default to auto permission mode"
+fi
+printf 'ok - injected settings layer defaults to auto mode\n'

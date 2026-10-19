@@ -1,6 +1,7 @@
 {
   "effortLevel": "xhigh",
   "permissions": {
+    "defaultMode": "auto",
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(rm -fr:*)",

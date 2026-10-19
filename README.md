@@ -97,7 +97,8 @@ For each invocation, the launcher:
 1. Selects the Z.ai endpoint and credential for the chosen authentication lane.
 2. Maps Claude Code's model slots to GLM models.
 3. Appends [`charter/ALBION.md`](charter/ALBION.md) to the system prompt.
-4. Loads the plugin and its permissions settings.
+4. Loads the plugin and its permissions settings, which start the session in
+   auto mode so unattended runs don't stop for approvals.
 5. Starts the stock `claude` binary.
 
 The plugin adds four groups of behavior:
