@@ -97,7 +97,7 @@ case "$scenario" in
     printf '{"error":{"code":"1211","message":"unknown model"}}\n400'
     ;;
   doctor-live)
-    if printf '%s' "$payload" | grep -q '"model":"glm-4.6v"'; then
+    if printf '%s' "$payload" | grep -q '"model":"glm-5.3-flash"'; then
       printf '{"content":[{"type":"text","text":"doctor vision probe"}]}\n200'
     else
       printf '{"model":"glm-5.3"}\n200'
@@ -144,7 +144,7 @@ record = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
 payload_line = next(line for line in record.splitlines() if line.startswith("payload="))
 payload = json.loads(payload_line[len("payload="):])
 
-assert payload["model"] == "glm-4.6v"
+assert payload["model"] == "glm-5.3-flash"
 content = payload["messages"][0]["content"]
 assert content[0]["type"] == "image"
 assert content[0]["source"]["type"] == "base64"
@@ -238,7 +238,7 @@ run_vision "unknown-model" \
   "${ROOT_DIR}/bin/albion-vision" --model bad-vision "$image_path"
 assert_exit_code 1 "$RUN_CODE" "1211 response fails"
 assert_contains "$RUN_STDERR" "unknown model slug 'bad-vision'" "1211 diagnostic names requested slug"
-assert_contains "$RUN_STDERR" "glm-4.6v" "1211 diagnostic suggests default model"
+assert_contains "$RUN_STDERR" "glm-5.3-flash" "1211 diagnostic suggests default model"
 assert_not_contains "$RUN_STDOUT" "$STUB_TOKEN" "1211 stdout never prints token"
 assert_not_contains "$RUN_STDERR" "$STUB_TOKEN" "1211 stderr never prints token"
 
@@ -297,7 +297,7 @@ doctor_output="$(
     ALBION_ZAI_TOKEN="$STUB_TOKEN" \
     "${ROOT_DIR}/bin/albion-doctor" --offline
 )"
-assert_contains "$doctor_output" "PASS vision: lane=plan model=glm-4.6v token=***set***" "offline doctor reports vision check"
+assert_contains "$doctor_output" "PASS vision: lane=plan model=glm-5.3-flash token=***set***" "offline doctor reports vision check"
 assert_not_contains "$doctor_output" "$STUB_TOKEN" "offline doctor vision check masks token"
 
 curl_record="${TMP_DIR}/doctor-live.record"
@@ -312,7 +312,7 @@ doctor_output="$(
     ALBION_CURL_SCENARIO=doctor-live \
     "${ROOT_DIR}/bin/albion-doctor" --live
 )"
-assert_contains "$doctor_output" "PASS vision: lane=plan model=glm-4.6v live description received" "live doctor runs vision probe"
+assert_contains "$doctor_output" "PASS vision: lane=plan model=glm-5.3-flash live description received" "live doctor runs vision probe"
 assert_not_contains "$doctor_output" "$STUB_TOKEN" "live doctor vision check masks token"
 
 # ALBION_VISION_TOKEN overrides the lane key — the metered scenario where the

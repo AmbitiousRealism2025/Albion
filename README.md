@@ -110,7 +110,7 @@ The plugin adds four groups of behavior:
 - Five agents cover scouting, quick bounded work, counterexample search,
   simplification, and verification. Skills load the longer procedures only
   when the task calls for them.
-- `albion-vision` sends image requests to GLM-4.6V. `albion-metrics` calculates
+- `albion-vision` sends image requests to GLM-5.3-Flash. `albion-metrics` calculates
   cost from Z.ai usage rather than Claude Code's Anthropic price table.
 
 The hooks activate only when the launcher sets `ALBION_ACTIVE=1`. A stock
@@ -122,18 +122,18 @@ plugin.
 
 | Command | Purpose |
 |---|---|
-| `albion` | Start GLM-5.3 with the charter, plugin, and Albion settings |
-| `albion --vanilla` | Start GLM-5.3 without the charter or plugin |
+| `albion` | Start GLM-5.3-Flash (default) with the charter, plugin, and Albion settings; GLM-5.3 sits in the opus slot |
+| `albion --vanilla` | Start the same GLM configuration without the charter or plugin |
 | `albion --dry-run` | Print the resolved configuration with the token masked |
 | `albion-doctor --live` | Check the local setup and make a one-token API probe |
 | `albion-setup` | Store the main and optional vision credentials |
-| `albion-vision <image>` | Describe an image with GLM-4.6V |
+| `albion-vision <image>` | Describe an image with GLM-5.3-Flash |
 | `albion-compile --check` | Check the compiled charter against `manifest/sections/` |
 | `albion-package` | Build a self-contained plugin directory under `dist/albion` |
 | `bin/albion-t3-code` | T3 Code provider launcher; loads local Albion secrets, then runs `bin/albion` |
 
 For a T3 Code provider instance, use `bin/albion-t3-code` as the binary path and
-add the model IDs `glm-5.3[1m]` and `glm-5-turbo` to the provider's model list.
+add the model IDs `glm-5.3-flash[1m]` and `glm-5.3[1m]` to the provider's model list.
 
 ## Authentication
 
@@ -205,7 +205,7 @@ that class of failure.
   flags, and environment behavior. `albion-doctor` and the test suite detect
   known breakage, but an upstream Claude Code release can still require an
   Albion update.
-- Direct GLM-4.6V use with a Coding Plan token was established by live tests,
+- Direct GLM-5.3-Flash vision use with a Coding Plan token was established by live tests,
   not provider documentation. `albion-doctor --live` checks that path before
   you rely on it.
 

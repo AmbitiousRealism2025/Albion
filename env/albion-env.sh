@@ -106,10 +106,10 @@ export ANTHROPIC_AUTH_TOKEN="${albion_auth_token}"
 # this change cannot leak the slow classifier routing into new sessions.
 if [ "${ALBION_ALLOW_OVERRIDES:-}" = "1" ]; then
   export ANTHROPIC_DEFAULT_OPUS_MODEL="${ANTHROPIC_DEFAULT_OPUS_MODEL:-glm-5.3[1m]}"
-  export ANTHROPIC_DEFAULT_HAIKU_MODEL="${ANTHROPIC_DEFAULT_HAIKU_MODEL:-glm-5-turbo}"
+  export ANTHROPIC_DEFAULT_HAIKU_MODEL="${ANTHROPIC_DEFAULT_HAIKU_MODEL:-glm-5.3-flash}"
 else
   export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.3[1m]"
-  export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"
+  export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.3-flash"
   unset ANTHROPIC_DEFAULT_SONNET_MODEL
 fi
 

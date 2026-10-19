@@ -68,10 +68,11 @@ export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
 export ANTHROPIC_AUTH_TOKEN="<your Z.ai token>"
 
 export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.3[1m]"
-export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.2[1m]"
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5-turbo"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.3-flash"
+# Leave ANTHROPIC_DEFAULT_SONNET_MODEL unset so Claude Code's auto-mode
+# permission classifier keeps its fast default (see env/albion-env.sh).
 
-claude --model 'glm-5.3[1m]'
+claude --model 'glm-5.3-flash[1m]'   # or 'glm-5.3[1m]' for heavier reasoning
 ```
 
 The `[1m]` suffix selects the 1 million token context variant. Z.ai describes
@@ -92,10 +93,10 @@ own effort. Albion passes a session settings file with `effortLevel` set to
 | `ALBION_ZAI_PLAN_TOKEN` | Credential for the plan lane |
 | `ALBION_ZAI_API_KEY` | Credential for the API lane |
 | `ALBION_ZAI_TOKEN` | Fallback credential for either lane |
-| `ALBION_MODEL` | Model passed to `claude --model`; defaults to `glm-5.3[1m]` |
+| `ALBION_MODEL` | Model passed to `claude --model`; defaults to `glm-5.3-flash[1m]` |
 | `ALBION_CHARTER` | Alternate charter path, used by A/B experiments |
 | `ALBION_ALLOW_OVERRIDES` | Preserve existing Claude Code model mappings when set to `1` |
-| `ALBION_VISION_TOKEN` | Separate credential for GLM-4.6V |
+| `ALBION_VISION_TOKEN` | Separate credential for vision (GLM-5.3-Flash) |
 | `ALBION_VISION_LANE` | Billing lane for the separate vision credential |
 
 The header in [`env/albion-env.sh`](../env/albion-env.sh) documents the tuning
@@ -106,7 +107,7 @@ Claude Code arguments. The output masks the credential.
 
 ## Vision
 
-`albion-vision` sends image requests directly to GLM-4.6V. A separate vision
+`albion-vision` sends image requests directly to GLM-5.3-Flash. A separate vision
 credential is useful when the main model uses the API lane but vision should
 use a different account or billing path.
 
@@ -116,7 +117,7 @@ export ALBION_VISION_LANE="api"
 albion-vision screenshot.png
 ```
 
-Coding Plan access to direct GLM-4.6V calls came from Albion's live tests, not a
+Coding Plan access to direct GLM-5.3-Flash vision calls came from Albion's live tests, not a
 documented provider guarantee. `albion-doctor --live` probes that path so an
 entitlement change fails before an image task depends on it.
 
@@ -142,7 +143,7 @@ plugin inert in an ordinary `claude` session.
 You can therefore run these in separate terminals:
 
 ```text
-albion    GLM-5.3 with the Albion charter and plugin
+albion    GLM-5.3-Flash with the Albion charter and plugin
 claude    your normal Claude Code configuration
 ```
 

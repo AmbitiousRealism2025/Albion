@@ -146,9 +146,9 @@ done
 case "$scenario" in
   success)
     # The real endpoint serves two request shapes: the 1-token text probe and
-    # the doctor's vision probe (model glm-4.6v, Anthropic messages format).
+    # the doctor's vision probe (model glm-5.3-flash, Anthropic messages format).
     case "$payload" in
-      *glm-4.6v*)
+      *glm-5.3-flash*)
         printf '{"content":[{"type":"text","text":"probe image described"}]}\n200'
         ;;
       *)

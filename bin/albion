@@ -129,7 +129,7 @@ resolve_model() {
   if resolved_model="$(passthrough_model_value)"; then
     model_injected=0
   else
-    resolved_model="${ALBION_MODEL:-glm-5.3[1m]}"
+    resolved_model="${ALBION_MODEL:-glm-5.3-flash[1m]}"
     model_injected=1
   fi
 }

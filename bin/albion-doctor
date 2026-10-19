@@ -439,7 +439,7 @@ check_vision() {
   local vision_prompt
 
   vision_bin="${repo_root}/bin/albion-vision"
-  vision_model="${ALBION_VISION_MODEL:-glm-4.6v}"
+  vision_model="${ALBION_VISION_MODEL:-glm-5.3-flash}"
   vision_prompt="Describe this image factually and completely."
 
   if [ ! -x "$vision_bin" ]; then

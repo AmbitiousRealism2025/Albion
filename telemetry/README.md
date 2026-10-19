@@ -50,6 +50,7 @@ Price table, USD per million tokens:
 | Model | Input | Cache read | Output |
 |---|---:|---:|---:|
 | `glm-5.3` | null | null | null |
+| `glm-5.3-flash` | null | null | null |
 | `glm-5.2` | 1.40 | 0.26 | 4.40 |
 | `glm-4.6v` | 0.30 | 0.05 | 0.90 |
 | `glm-5-turbo` | null | null | null |

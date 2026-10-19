@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_MODEL="glm-4.6v"
+DEFAULT_MODEL="glm-5.3-flash"
 DEFAULT_PROMPT="Describe this image factually and completely."
 MAX_IMAGE_BYTES=5242880
 
@@ -406,7 +406,7 @@ handle_http_error() {
   fi
 
   if [ "$http_status" = "400" ] && [ "$error_code" = "1211" ]; then
-    fail "unknown model slug '${model}'; use glm-4.6v unless you have confirmed another Z.ai vision slug."
+    fail "unknown model slug '${model}'; use glm-5.3-flash unless you have confirmed another Z.ai vision slug."
   fi
 
   detail="HTTP ${http_status}"
