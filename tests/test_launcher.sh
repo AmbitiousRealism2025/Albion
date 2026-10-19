@@ -284,6 +284,96 @@ assert_exit_code 1 "$RUN_CODE" "env source failure exits 1"
 assert_contains "$RUN_STDERR" "ALBION_ZAI_PLAN_TOKEN" "env failure relays env stderr"
 assert_not_contains "$RUN_STDERR" "test-token" "env failure does not invent token output"
 
+t3_home="${TMP_DIR}/t3-home"
+mkdir -p "${t3_home}/.albion"
+cat >"${t3_home}/.albion/secrets.zsh" <<'SECRETS'
+export ALBION_ZAI_TOKEN=t3-secret-token
+export ALBION_AUTH_LANE=plan
+SECRETS
+chmod 600 "${t3_home}/.albion/secrets.zsh"
+
+stub_path="$(make_stub_path t3-wrapper)"
+: >"${TMP_DIR}/t3-wrapper.record"
+set +e
+env -i \
+  "HOME=${t3_home}" \
+  "PATH=${stub_path}" \
+  "TMPDIR=${TMPDIR:-/tmp}" \
+  "ALBION_CHARTER=${charter_path}" \
+  "ALBION_STUB_RECORD=${TMP_DIR}/t3-wrapper.record" \
+  bash "${ROOT_DIR}/bin/albion-t3-code" --dry-run "from t3" \
+  >"${TMP_DIR}/t3-wrapper.out" 2>"${TMP_DIR}/t3-wrapper.err"
+RUN_CODE=$?
+set -e
+RUN_RECORD="$(cat "${TMP_DIR}/t3-wrapper.record")"
+RUN_STDOUT="$(cat "${TMP_DIR}/t3-wrapper.out")"
+RUN_STDERR="$(cat "${TMP_DIR}/t3-wrapper.err")"
+assert_exit_code 0 "$RUN_CODE" "T3 wrapper sources local Albion secrets"
+assert_eq "" "$RUN_RECORD" "T3 wrapper dry-run does not invoke claude"
+assert_contains "$RUN_STDOUT" "anthropic_auth_token=***set***" "T3 wrapper dry-run sees sourced token"
+assert_contains "$RUN_STDOUT" "mode=default" "T3 wrapper delegates to default launcher mode"
+assert_not_contains "$RUN_STDOUT" "t3-secret-token" "T3 wrapper never prints token value"
+assert_not_contains "$RUN_STDERR" "t3-secret-token" "T3 wrapper stderr never prints token value"
+
+: >"${TMP_DIR}/t3-wrapper-exec.record"
+set +e
+env -i \
+  "HOME=${t3_home}" \
+  "PATH=${stub_path}" \
+  "TMPDIR=${TMPDIR:-/tmp}" \
+  "ALBION_STUB_RECORD=${TMP_DIR}/t3-wrapper-exec.record" \
+  bash "${ROOT_DIR}/bin/albion-t3-code" "from t3 exec" \
+  >"${TMP_DIR}/t3-wrapper-exec.out" 2>"${TMP_DIR}/t3-wrapper-exec.err"
+RUN_CODE=$?
+set -e
+RUN_RECORD="$(cat "${TMP_DIR}/t3-wrapper-exec.record")"
+RUN_STDOUT="$(cat "${TMP_DIR}/t3-wrapper-exec.out")"
+RUN_STDERR="$(cat "${TMP_DIR}/t3-wrapper-exec.err")"
+assert_exit_code 0 "$RUN_CODE" "T3 wrapper execs the normal launcher"
+assert_eq "" "$RUN_STDOUT" "T3 wrapper normal launch is stdout-quiet with stub"
+assert_eq "" "$RUN_STDERR" "T3 wrapper normal launch is stderr-quiet with stub"
+assert_contains "$RUN_RECORD" "agent=Albion" "T3 wrapper preserves Albion agent name"
+assert_contains "$RUN_RECORD" "base_url=https://api.z.ai/api/anthropic" "T3 wrapper sources Albion env through launcher"
+assert_contains "$RUN_RECORD" "argv[8]=from t3 exec" "T3 wrapper preserves passthrough args"
+assert_not_contains "$RUN_RECORD" "t3-secret-token" "T3 wrapper record never includes token"
+
+: >"${TMP_DIR}/t3-wrapper-bad-flag.record"
+set +e
+env -i \
+  "HOME=${t3_home}" \
+  "PATH=${stub_path}" \
+  "TMPDIR=${TMPDIR:-/tmp}" \
+  "ALBION_STUB_RECORD=${TMP_DIR}/t3-wrapper-bad-flag.record" \
+  bash "${ROOT_DIR}/bin/albion-t3-code" --albion-x \
+  >"${TMP_DIR}/t3-wrapper-bad-flag.out" 2>"${TMP_DIR}/t3-wrapper-bad-flag.err"
+RUN_CODE=$?
+set -e
+RUN_RECORD="$(cat "${TMP_DIR}/t3-wrapper-bad-flag.record")"
+RUN_STDOUT="$(cat "${TMP_DIR}/t3-wrapper-bad-flag.out")"
+RUN_STDERR="$(cat "${TMP_DIR}/t3-wrapper-bad-flag.err")"
+assert_exit_code 4 "$RUN_CODE" "T3 wrapper preserves bad Albion flag behavior"
+assert_eq "" "$RUN_STDOUT" "T3 wrapper bad flag has no stdout"
+assert_contains "$RUN_STDERR" "unknown Albion flag: --albion-x" "T3 wrapper bad flag relays launcher error"
+assert_eq "" "$RUN_RECORD" "T3 wrapper bad flag does not invoke claude"
+assert_not_contains "$RUN_STDERR" "t3-secret-token" "T3 wrapper bad flag never prints token"
+
+empty_t3_home="${TMP_DIR}/empty-t3-home"
+mkdir -p "$empty_t3_home"
+set +e
+env -i \
+  "HOME=${empty_t3_home}" \
+  "PATH=${BASE_PATH}" \
+  "TMPDIR=${TMPDIR:-/tmp}" \
+  bash "${ROOT_DIR}/bin/albion-t3-code" --dry-run \
+  >"${TMP_DIR}/t3-wrapper-missing-secrets.out" 2>"${TMP_DIR}/t3-wrapper-missing-secrets.err"
+RUN_CODE=$?
+set -e
+RUN_STDOUT="$(cat "${TMP_DIR}/t3-wrapper-missing-secrets.out")"
+RUN_STDERR="$(cat "${TMP_DIR}/t3-wrapper-missing-secrets.err")"
+assert_exit_code 1 "$RUN_CODE" "T3 wrapper without secrets delegates to Albion env failure"
+assert_eq "" "$RUN_STDOUT" "T3 wrapper missing secrets has no stdout"
+assert_contains "$RUN_STDERR" "ALBION_ZAI_PLAN_TOKEN" "T3 wrapper missing secrets preserves Albion token diagnostic"
+
 run_launcher "missing-claude" "$BASE_PATH" set "$charter_path" with-token "${ROOT_DIR}/bin/albion"
 assert_exit_code 2 "$RUN_CODE" "missing claude exits 2"
 assert_contains "$RUN_STDERR" "claude binary not found on PATH" "missing claude names failure"

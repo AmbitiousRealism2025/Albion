@@ -130,6 +130,10 @@ plugin.
 | `albion-vision <image>` | Describe an image with GLM-4.6V |
 | `albion-compile --check` | Check the compiled charter against `manifest/sections/` |
 | `albion-package` | Build a self-contained plugin directory under `dist/albion` |
+| `bin/albion-t3-code` | T3 Code provider launcher; loads local Albion secrets, then runs `bin/albion` |
+
+For a T3 Code provider instance, use `bin/albion-t3-code` as the binary path and
+add the model IDs `glm-5.3[1m]` and `glm-5-turbo` to the provider's model list.
 
 ## Authentication
 
